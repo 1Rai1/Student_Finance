@@ -1,1 +1,1 @@
-# Student_Finance
+# StudiFi - Student Finance Mobile Application
