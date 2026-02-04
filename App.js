@@ -1,20 +1,25 @@
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import Expenses from "./Frontend/Screens/Expenses"
+import Goals from "./Frontend/Screens/Goals"
+import Investments from "./Frontend/Screens/Investments"
+import Discounts from "./Frontend/Screens/Discounts"
+import Register from './Frontend/Screens/Register';
+import Login from "./Frontend/Screens/Login"
+
+const Tab = createBottomTabNavigator();
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Tab.Navigator>
+        <Tab.Screen name="Expenses" component={Expenses} />
+        <Tab.Screen name="Invesments" component={Investments} />
+        <Tab.Screen name="Goals" component={Goals} />
+        <Tab.Screen name="Discounts" component={Discounts} />
+      </Tab.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
