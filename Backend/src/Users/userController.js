@@ -78,7 +78,7 @@ exports.registerUser = async (req,res) => {
             if(!user){
                 return res.status(200).json({message: "User not found"})
             }
-            return res.status(200).json({success: true, message:"User deleted successfully"})
+            res.status(200).json({success: true, message:"User deleted successfully"})
         }
         catch (error){
             return res.status(500).json({message:error.message})
