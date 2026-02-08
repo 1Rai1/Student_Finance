@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-const linkSchema = new moogoose.Schema({
+const linkSchema = new mongoose.Schema({
     description: {
       type: String,
       reqired: true  

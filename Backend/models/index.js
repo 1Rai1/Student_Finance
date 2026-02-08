@@ -1,6 +1,6 @@
 module.exports = {
-  Users: require('./User.model'),
-  Transactions: require('./Transaction.model'),
+  Users: require('./Users.model'),
+  Expenses: require('./Expenses.model'),
   Goals: require('./Goal.model'),
   Budgets: require('./Budjet.model'),
   Links: require('./Link.model'),
