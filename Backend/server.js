@@ -1,33 +1,78 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./config/db'); 
-//routes
-const userRoutes = require('./src/Users/userRoutes');
-const goalRoutes = require('./src/Goals/goalRoutes')
+require('dotenv').config();
 
-console.log('📍 Current directory:', __dirname);
-console.log('🔍 MONGO_URI:', process.env.MONGO_URI);
-console.log('🔍 PORT:', process.env.PORT);
-console.log('🔍 All env vars:', Object.keys(process.env).filter(k => k.includes('MONGO')));
+// Import routes
+const userRoutes = require('./src/Users/user-Routes')
 
+// Initialize Firebase Admin
+require('./firebase/firebase-admin');
 
 const app = express();
 
-connectDB();
+// CORS configuration - Allow React Native connections
+app.use(cors({
+  origin: ['http://localhost:8081', 'http://localhost:19006', 'exp://localhost:19000'],
+  credentials: true
+}));
 
-// Middleware
-app.use(cors());
+// Body parser middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.get('/', (req, res) => {
-  res.send("Test");
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
 });
 
-app.use('/users', userRoutes);
-app.use('./goals', goalRoutes)
+// API Routes
+app.use('/api/users', userRoutes);
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Student Finance Backend is running',
+    timestamp: new Date().toISOString(),
+    firebase: 'connected'
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Student Finance Backend API',
+    version: '1.0.0',
+    endpoints: {
+      students: '/api/students',
+      health: '/health'
+    }
+  });
+});
+
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err.stack);
+  
+  res.status(500).json({
+    success: false,
+    error: 'Internal server error',
+    message: err.message
+  });
+});
+
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`
+  🚀 Student Finance Backend Started!
+  ⏰ Time: ${new Date().toLocaleString()}
+  📡 Port: ${PORT}
+  🔥 Firebase: Connected
+  📍 Health Check: http://localhost:${PORT}/health
+  📍 API Base URL: http://localhost:${PORT}/api
+  `);
 });

@@ -1,28 +1,20 @@
 {
-  "name": "backend",
+  "name": "student-finance-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend API for Student Finance React Native app",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "axios": "^1.13.4",
-    "bcryptjs": "^3.0.3",
-    "brcypt": "^1.0.1",
-    "cors": "^2.8.6",
-    "dotenv": "^17.2.4",
-    "express": "^5.2.1",
-    "mongodb": "^7.1.0",
-    "mongoose": "^9.1.6"
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.22.1",
+    "firebase-admin": "^11.11.0",
+    "protobufjs": "^7.2.4"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.0.0"
   }
 }
