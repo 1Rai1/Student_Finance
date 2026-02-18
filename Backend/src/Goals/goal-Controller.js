@@ -114,7 +114,7 @@ const getGoalById = async (req,res) => {
 }
 
 //create you goal
-const createGoal = async (res,res) => {
+const createGoal = async (req,res) => {
     try{
         //user id
         const {userId} = req.params
