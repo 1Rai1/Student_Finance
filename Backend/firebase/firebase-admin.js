@@ -39,10 +39,6 @@ const firebaseAdmin = initializeFirebase();
 
 // Export services
 const db = firebaseAdmin.firestore();
-db.settings({
-  preferRest: true,
-  ignoreUndefinedProperties: true
-})
 const auth = firebaseAdmin.auth();
 const storage = firebaseAdmin.storage();
 const messaging = firebaseAdmin.messaging();
