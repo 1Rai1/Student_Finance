@@ -4,6 +4,7 @@ require('dotenv').config();
 
 // Import routes
 const userRoutes = require('./src/Users/user-Routes')
+const goalRoutes = require('./src/Goals/goal-Routes')
 
 // Initialize Firebase Admin
 require('./firebase/firebase-admin');
@@ -28,6 +29,7 @@ app.use((req, res, next) => {
 
 // API Routes
 app.use('/api/users', userRoutes);
+app.use('/api/goals', goalRoutes)
 
 // Health check endpoint
 app.get('/health', (req, res) => {
