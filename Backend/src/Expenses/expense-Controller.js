@@ -217,3 +217,11 @@ const deleteExpense = async(req,res) => {
 
     }
 }
+
+module.exports = {
+    getAllExpenses,
+    getExpenseById,
+    getExpenseByUserId,
+    createExpense,
+    deleteExpense
+}

@@ -9,7 +9,7 @@ router.get('/user/:userId/details', goalController.getUserWithGoals)
 //get user with motivationg with minimal detail
 router.get('/user/:userId', goalController.getGoalsByUserId) 
 //get specific motivation ahahah
-router.get('id', goalController.getGoalById)
+router.get('/:id', goalController.getGoalById)
 //create a motivation little one
 router.post('/user/:userId', goalController.createGoal)
 //update your motivation progress little one
