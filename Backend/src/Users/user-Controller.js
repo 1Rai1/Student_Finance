@@ -8,7 +8,7 @@ const getAllUser = async (req, res) => {
     try{
         const snapshot = await userCollection.get()
 
-        if(!snapshot){
+        if(snapshot.empty){
             return res.status(404).json({message: "No Users Found"})
                 }
         const users = []
@@ -36,7 +36,7 @@ const getAllUser = async (req, res) => {
 //Get User by ID
  const getUserById = async (req,res) => {
     try{
-        const {id} = req.body
+        const {id} = req.params
 
         const userDoc = await userCollection.doc(id).get()
 
@@ -56,7 +56,7 @@ const getAllUser = async (req, res) => {
     catch(error){
         return res.status(500).json({
             success:false,
-            message: "Erro fetching User",
+            message: "Error fetching User",
             error: error.message
         })
     }
@@ -66,10 +66,7 @@ const getAllUser = async (req, res) => {
  //Create User
 const createUser = async (req,res) => {
     try{
-        const {name,email,password,role,age} = req.body
-           console.log('Request body:', req.body); // Debug log
-    console.log('DB instance:', db); // Check if db exists
-    
+        const {name,email,password,role,age,monthlyBudget} = req.body
 
         if(!name || !email || !password){
             return res.status(400).json({
@@ -91,6 +88,7 @@ const createUser = async (req,res) => {
             password,
             age: age || null,
             role: role || 'user',
+            monthlyBudget: parseFloat(monthlyBudget),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
 
@@ -149,6 +147,7 @@ const updateUser = async(req,res) => {
            ...(password && {password}),
            ...(age != undefined && {age}),
            ...(role && {role}),
+           ...(monthlyBudget != undefined && {age}),
            updatedAt: new Date().toISOString()
         }
 

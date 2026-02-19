@@ -2,12 +2,14 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+// Initialize Firebase Admin
+require('./firebase/firebase-admin');
+
+
 // Import routes
 const userRoutes = require('./src/Users/user-Routes')
 const goalRoutes = require('./src/Goals/goal-Routes')
-
-// Initialize Firebase Admin
-require('./firebase/firebase-admin');
+const expenseRoutes = require('./src/Expenses/expense-Routes')
 
 const app = express();
 
@@ -28,8 +30,9 @@ app.use((req, res, next) => {
 });
 
 // API Routes
-app.use('/api/users', userRoutes);
+app.use('/api/users', userRoutes)
 app.use('/api/goals', goalRoutes)
+app.use('/api/expenses', expenseRoutes)
 
 // Health check endpoint
 app.get('/health', (req, res) => {
