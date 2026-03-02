@@ -39,8 +39,15 @@ const firebaseAdmin = initializeFirebase();
 
 // Export services
 const db = firebaseAdmin.firestore();
+
+db.settings({
+  preferRest: true,
+  ignoreUndefinedProperties: true
+});
+
 const auth = firebaseAdmin.auth();
 const storage = firebaseAdmin.storage();
+const bucket = storage.bucket(); // ← Also add this for image uploads
 const messaging = firebaseAdmin.messaging();
 
 module.exports = {
@@ -48,5 +55,6 @@ module.exports = {
   db,
   auth,
   storage,
+  bucket, // ← Export bucket too
   messaging
 };

@@ -288,7 +288,7 @@ const addProgres = async (req,res) =>{
 
         const goalData = goalDoc.data()
         const newCurrentAmount = goalData.currentAmount + parseFloat(amount)
-        const newProgress = (newCurrentAmount / goalData.targetAmount) * 100
+        const newProgress = (newCurrentAmount / goalData.targetAmount) * 100//percentage
 
         const updateData = {
         currentAmount: newCurrentAmount,
