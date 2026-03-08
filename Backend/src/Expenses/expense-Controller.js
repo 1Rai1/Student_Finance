@@ -39,7 +39,7 @@ const getAllExpenses = async (req,res) => {
     }
 }
 
-//get them expenses for a spisipic usir
+//get them expenses for a specific user
 const getExpenseByUserId = async (req,res) => {
     try{
         const {userId} = req.params
@@ -53,13 +53,21 @@ const getExpenseByUserId = async (req,res) => {
             })
         }
 
-        const snapshot = await expenseCollection.
-        where('userId', '==', userId).get()
+        const snapshot = await expenseCollection
+            .where('userId', '==', userId)
+            .get()
+
+        if(snapshot.empty){
+            return res.status(404).json({
+                success:false,
+                message:"No Expenses Found For This User"
+            })
+        }
 
         const expenses = []
         snapshot.forEach(doc => {
             expenses.push({
-                id: doc,
+                id: doc.id, 
                 ...doc.data()
             })
         })
@@ -78,11 +86,12 @@ const getExpenseByUserId = async (req,res) => {
         })
     }
 }
-//get expense by id might not be used
+
+//get expense by id
 const getExpenseById = async (req,res) => {
     try{
         const {expenseId} = req.params
-        const expenseDoc = await expenseCollection.doc(id).get()
+        const expenseDoc = await expenseCollection.doc(expenseId).get()  
         if(!expenseDoc.exists){
             return res.status(404).json({
                 success:false,
@@ -111,13 +120,15 @@ const createExpense = async(req,res) => {
     try{
         const {userId} = req.params
         const {title, description, amount} = req.body
-        //check proper amount
-        if(!amount || amount <= 0){
+        
+        //check title and amount
+        if(!title || !amount || amount <= 0){
             return res.status(400).json({
                 success:false,
-                message: "Amount Must Be Greater Than Zero"
+                message: "Title is required and amount must be greater than zero"
             })
         }
+        
         //check user
         const userDoc = await userCollection.doc(userId).get()
         if(!userDoc.exists){
@@ -126,24 +137,26 @@ const createExpense = async(req,res) => {
                 message:"User Not Found"
             })
         }
+        
         const expenseData = {
             userId,
             title,
             description: description || '',
             amount: parseFloat(amount),
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toDateString()
+            updatedAt: new Date().toISOString()
         }
-       const expenseDoc = await expenseCollection.add(expenseData)
+        
+        const expenseDoc = await expenseCollection.add(expenseData)
 
-       res.status(201).json({
-        success:true,
-        data: {
-            id: expenseDoc.id,
-            ...expenseDoc.data()
-        }
-       })
-
+        res.status(201).json({
+            success:true,
+            message: "Expense Created Successfully",
+            data: {
+                id: expenseDoc.id,
+                ...expenseData 
+            }
+        })
     }
     catch(error){
         res.status(500).json({
@@ -158,37 +171,43 @@ const createExpense = async(req,res) => {
 const updateExpense = async(req,res) => {
     try{
         const {expenseId} = req.params
-        const {title,description,amount} = req.body
-        //check amount
-        if(!amount || amount <= 0){//! = not baliktad
-            return res.status(400).json({
-                success: false,
-                message: "Amount Must Be Greater Than Zero"
-            })
-        }
-        const expenseDoc = await expenseCollection.doc(expenseId).get()//either true or false get still
-        //check expense exists
+        const {title, description, amount} = req.body
+        
+        //check expense exists first
+        const expenseDoc = await expenseCollection.doc(expenseId).get()
         if(!expenseDoc.exists){
             return res.status(404).json({
                 success:false,
                 message: "Expense does not exist"
             })
         }
-        const updatedExpense = {
-            ...(title && {title}),
-            ...(description && {description}),
-            ...(amount != undefined && {amount})
+        
+        //validate amount if provided
+        if(amount !== undefined && amount <= 0){
+            return res.status(400).json({
+                success: false,
+                message: "Amount Must Be Greater Than Zero"
+            })
         }
         
-        await expenseCollection.update(updatedExpense)//update
+        const updatedExpense = {
+            ...(title && {title}),
+            ...(description !== undefined && {description}),
+            ...(amount !== undefined && {amount: parseFloat(amount)}), 
+            updatedAt: new Date().toISOString()
+        }
+        
+        await expenseCollection.doc(expenseId).update(updatedExpense)  
 
-        const updatedDoc = await expenseCollection.doc(expenseId).get() //return updated value
+        const updatedDoc = await expenseCollection.doc(expenseId).get()
         
         res.status(200).json({
             success: true,
+            message: "Expense Updated Successfully",
             data: {
                 id: updatedDoc.id,
-                ...updatedDoc.data()            }
+                ...updatedDoc.data()
+            }
         })
     }
     catch(error){
@@ -199,6 +218,7 @@ const updateExpense = async(req,res) => {
         })
     }
 }
+
 //delete
 const deleteExpense = async(req,res) => {
     try{
@@ -211,10 +231,21 @@ const deleteExpense = async(req,res) => {
                 success:false,
                 message:"Expense Not Found"
             })
-        }      
+        }
+        
+        await expenseCollection.doc(expenseId).delete()
+        
+        res.status(200).json({
+            success: true,
+            message: "Expense Deleted Successfully"
+        })
     }
     catch(error){
-
+        res.status(500).json({
+            success: false,
+            message: "Error Deleting Expense",
+            error: error.message
+        })
     }
 }
 
@@ -223,5 +254,6 @@ module.exports = {
     getExpenseById,
     getExpenseByUserId,
     createExpense,
+    updateExpense, 
     deleteExpense
 }
