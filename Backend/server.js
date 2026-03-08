@@ -30,9 +30,9 @@ app.use((req, res, next) => {
 });
 
 // API Routes
-app.use('/api/users', userRoutes)
-app.use('/api/goals', goalRoutes)
-app.use('/api/expenses', expenseRoutes)
+app.use('/api/user', userRoutes)
+app.use('/api/goal', goalRoutes)
+app.use('/api/expense', expenseRoutes)
 
 // Health check endpoint
 app.get('/health', (req, res) => {

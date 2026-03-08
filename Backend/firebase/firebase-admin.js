@@ -47,7 +47,7 @@ db.settings({
 
 const auth = firebaseAdmin.auth();
 const storage = firebaseAdmin.storage();
-const bucket = storage.bucket(); // ← Also add this for image uploads
+const bucket = storage.bucket(); 
 const messaging = firebaseAdmin.messaging();
 
 module.exports = {
@@ -55,6 +55,6 @@ module.exports = {
   db,
   auth,
   storage,
-  bucket, // ← Export bucket too
+  bucket, 
   messaging
 };
