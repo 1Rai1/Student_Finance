@@ -13,7 +13,6 @@ const expenseRoutes = require('./src/Expenses/expense-Routes')
 
 const app = express();
 
-// CORS configuration - Allow React Native connections
 app.use(cors({
   origin: ['http://localhost:8081', 'http://localhost:19006', 'exp://localhost:19000'],
   credentials: true

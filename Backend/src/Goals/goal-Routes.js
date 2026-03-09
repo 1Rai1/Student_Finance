@@ -13,7 +13,7 @@ router.get('/:id', goalController.getGoalById)
 //create a motivation little one
 router.post('/user/:userId', goalController.createGoal)
 //update your motivation progress little one
-router.post('/:id/progress', goalController.addProgres)
+router.post('/:id/progress', goalController.addProgress)
 //update your crypto lmmao
 router.put('/:id', goalController.updateGoals)
 //why woud you delete it?
