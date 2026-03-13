@@ -10,6 +10,7 @@ require('./firebase/firebase-admin');
 const userRoutes = require('./src/Users/user-Routes')
 const goalRoutes = require('./src/Goals/goal-Routes')
 const expenseRoutes = require('./src/Expenses/expense-Routes')
+const discountRoutes = require('./src/Discounts/discount-Routes')
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use((req, res, next) => {
 app.use('/api/user', userRoutes)
 app.use('/api/goal', goalRoutes)
 app.use('/api/expense', expenseRoutes)
+app.use('/api/discount', discountRoutes)
 
 // Health check endpoint
 app.get('/health', (req, res) => {
