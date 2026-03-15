@@ -1,4 +1,4 @@
-const {db,bucket} = require('../../firebase/firebase-admin')
+const {db, bucket} = require('../../firebase/firebase-admin')
 const sharp = require('sharp')
 
 const discountCollection = db.collection('discounts');
@@ -7,7 +7,7 @@ const interactionsCollection = db.collection('post-interactions');
 const messagesCollection = db.collection('post-messages')
 
 //create discount
-const createDiscount = async(req,res) => {
+const createDiscount = async(req, res) => {
     try{
         const {userId} = req.params
         const {
@@ -17,7 +17,7 @@ const createDiscount = async(req,res) => {
         } = req.body
 
         //check information
-        if(!title && !description && !location){
+        if(!title || !description || !location){  
             return res.status(400).json({
                 success: false,
                 message: "Incomplete Information"
@@ -32,17 +32,22 @@ const createDiscount = async(req,res) => {
                message: "No User Found" 
             })
         }
+        
         let imageUrl = ''
 
-         //files
-         if(req.file){
+        //files
+        if(req.file){
             const processedImage = await sharp(req.file.buffer)
-            .resize(1200,1200, {
-                fit: 'inside',
-                withoutEnlargement: true
-            })
-            .jpeg({quality: 90})
-            .toBuffer()
+                .resize(1200, 1200, {
+                    fit: 'inside',
+                    withoutEnlargement: true
+                })
+                .jpeg({quality: 90})
+                .toBuffer()
+
+           
+            const filename = `discount-posts/${userId}-${Date.now()}.jpg`;
+            const file = bucket.file(filename);  
 
             await file.save(processedImage, {
                 metadata: {
@@ -51,10 +56,11 @@ const createDiscount = async(req,res) => {
             })
 
             await file.makePublic()
-             imageUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
-         }
-         //create the data
-         const postData = {
+            imageUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+        }
+        
+        //create the data
+        const postData = {
             userId,
             title,
             description,
@@ -71,16 +77,17 @@ const createDiscount = async(req,res) => {
             verificationStatus: 'unverified',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
-         }
-         const docRef = await discountCollection.add(postData)
+        }
+        
+        const docRef = await discountCollection.add(postData)
 
-         const userData = userDoc.data()
+        const userData = userDoc.data()
 
-         res.status(201).json({
-            success:true,
+        res.status(201).json({
+            success: true,
             message: "Discount Created Successfully",
             data: {
-                id: docRef,
+                id: docRef.id, 
                 ...postData,
                 author: {
                     id: userId,
@@ -88,7 +95,7 @@ const createDiscount = async(req,res) => {
                     email: userData.email
                 }
             }
-         })
+        })
     }
     catch(error){
         res.status(500).json({
@@ -100,12 +107,12 @@ const createDiscount = async(req,res) => {
 }
 
 //get all the discount post
-const getAllDiscount = async(req,res) => {
+const getAllDiscount = async(req, res) => {
     try{
         const snapshot = await discountCollection
-        .orderBy('createdAt', 'desc')
-        .limit(20)
-        .get()
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .get()
 
         //check if empty
         if(snapshot.empty){
@@ -118,34 +125,34 @@ const getAllDiscount = async(req,res) => {
         const posts = []
         for (const doc of snapshot.docs){
             const postData = doc.data()
-        
 
-        //get author 
-        const userDoc = await userCollection.doc(postData.userId).get()
-        const userData = userDoc.exists ? userDoc.data() : {}
+            //get author 
+            const userDoc = await userCollection.doc(postData.userId).get()
+            const userData = userDoc.exists ? userDoc.data() : {}
 
-        //get data
-        posts.push({
-            id: doc.id,
-            title: postData.title,
-            description: postData.description,
-            location: postData.location,
-            imageUrl: postData.imageUrl,
-            likes: postData.likes,
-            saves: postData.saves,
-            messages: postData.messages,
-            votes: postData.votes,
-            verificationStatus: postData.verificationStatus,
-            createdAt: postData.createdAt,
-            author: {
-                id: postData.userId,
-                name: postData.name || 'Unknown User',
-                email: postData.email || ''
-            }
-        })
+            //get data
+            posts.push({
+                id: doc.id,
+                title: postData.title,
+                description: postData.description,
+                location: postData.location,
+                imageUrl: postData.imageUrl,
+                likes: postData.likes,
+                saves: postData.saves,
+                messages: postData.messages,
+                votes: postData.votes,
+                verificationStatus: postData.verificationStatus,
+                createdAt: postData.createdAt,
+                author: {
+                    id: postData.userId,
+                    name: userData.name || 'Unknown User', 
+                    email: userData.email || ''  
+                }
+            })
         }
+        
         res.status(200).json({
-            success:true,
+            success: true,
             count: posts.length,
             data: posts
         })
@@ -160,7 +167,7 @@ const getAllDiscount = async(req,res) => {
 }
 
 //get discount by id
-const getDiscountById = async(req,res) => {
+const getDiscountById = async(req, res) => {
     try{
         const {postId} = req.params
         const postDoc = await discountCollection.doc(postId).get()
@@ -168,17 +175,19 @@ const getDiscountById = async(req,res) => {
         //check if post exist
         if(!postDoc.exists){
             return res.status(404).json({
-                success:false,
+                success: false,
                 message: "No Post Found"
             })
         }
+        
         const postData = postDoc.data()
+        
         //get author info
         const userDoc = await userCollection.doc(postData.userId).get()
         const userData = userDoc.exists ? userDoc.data() : {}
 
         res.status(200).json({
-            success:true,
+            success: true,
             data: {
                 id: postDoc.id,
                 ...postData,
@@ -192,7 +201,7 @@ const getDiscountById = async(req,res) => {
     }   
     catch(error){
         res.status(500).json({
-            success:false,
+            success: false,
             message: "Error Fetching Discount By Id",
             error: error.message
         })
@@ -200,7 +209,7 @@ const getDiscountById = async(req,res) => {
 }
 
 //like post
-const likePost = async(req,res) => {
+const likePost = async(req, res) => {
     try{
         const {postId} = req.params
         const {userId} = req.body
@@ -209,67 +218,61 @@ const likePost = async(req,res) => {
         const postDoc = await discountCollection.doc(postId).get()
         if(!postDoc.exists){
             return res.status(404).json({
-                success:false,
-                message: "No Post Found"
-            })
-        }
-
-        //check user
-        const userDoc = await userCollection.doc(userId).get()
-        if(!userDoc.exists){
-            return res.status(404).json({
                 success: false,
-                message: "User Not Found"
+                message: "No Post Found"
             })
         }
 
         //CHECK if already liked
         const existingLike = await interactionsCollection
-        .where('postId', '==', postId)
-        .where('userId', '==', userId)
-        .limit(1)
-        .get()
+            .where('postId', '==', postId)
+            .where('userId', '==', userId)
+            .where('type', '==', 'like')  
+            .limit(1)
+            .get()
 
         if(!existingLike.empty){
             //Unlike that post
             existingLike.forEach(async (doc) => {
-                await discountCollection.doc(doc.id).delete()
+                await interactionsCollection.doc(doc.id).delete()  
             })
-            const currentLikes = postData.data().likes || 0
+            
+            const currentLikes = postDoc.data().likes || 0  
             await discountCollection.doc(postId).update({
-                likes: Math.max(0, currentLikes -1)
+                likes: Math.max(0, currentLikes - 1)
             })
 
             return res.status(200).json({
                 success: true,
                 message: "Post Unliked",
                 liked: false,
-                likes: Math.max(0, currentLikes -1)
+                likes: Math.max(0, currentLikes - 1)
             })
-        }else{
+        } else {
             //LIKE
             await interactionsCollection.add({
                 postId,
                 userId,
                 type: 'like',
-                createdAt: new Date.toISOString()
+                createdAt: new Date().toISOString()  
             })
 
             const currentLikes = postDoc.data().likes || 0    
-            await discountCollection.update({
+            await discountCollection.doc(postId).update({ 
                 likes: currentLikes + 1
-            })   
+            })
+            
             return res.status(200).json({
-                success:true,
+                success: true,
                 message: "Post Liked",
                 liked: true,
                 likes: currentLikes + 1
             })
-         }
+        }
     }
     catch(error){
         res.status(500).json({
-            success:false,
+            success: false,
             message: "Error Liking Post",
             error: error.message
         })
@@ -277,7 +280,7 @@ const likePost = async(req,res) => {
 }
 
 //save Post
-const savePost = async(req,res) => {
+const savePost = async(req, res) => {
     try{
         const {postId} = req.params
         const {userId} = req.body
@@ -290,26 +293,28 @@ const savePost = async(req,res) => {
                 message: "No Post Found"
             })
         }
+        
         //check user
-        const userDoc = await discountCollection.doc(userId).get()
+        const userDoc = await userCollection.doc(userId).get()  
         if(!userDoc.exists){
             return res.status(404).json({
-                success:false,
+                success: false,
                 message: "User Not Found"
             })
         }
 
-        //check is user already saved
+        //check if user already saved
         const existingSave = await interactionsCollection
-        .where('userId', '==', userId)
-        .where('postId', '==', postId)
-        .limit(1)
-        .get()
+            .where('userId', '==', userId)
+            .where('postId', '==', postId)
+            .where('type', '==', 'save') 
+            .limit(1)
+            .get()
 
         if(!existingSave.empty){
             //unsave
             existingSave.forEach(async (doc) => {
-                await interactionsCollection.doc(postId).delete()
+                await interactionsCollection.doc(doc.id).delete()  
             })
 
             const currentSaves = postDoc.data().saves || 0
@@ -321,10 +326,10 @@ const savePost = async(req,res) => {
                 success: true,
                 message: "Post Unsaved",
                 saved: false,
-                saves: Math.max(0, currentSaves -1)
+                saves: Math.max(0, currentSaves - 1)
             })
         }
-        else{
+        else {
             //save
             await interactionsCollection.add({
                 postId,
@@ -334,7 +339,7 @@ const savePost = async(req,res) => {
             })
 
             const currentSaves = postDoc.data().saves || 0
-            await discountCollection(postId).update({
+            await discountCollection.doc(postId).update({  
                 saves: currentSaves + 1
             })
 
@@ -349,20 +354,21 @@ const savePost = async(req,res) => {
     catch(error){
         res.status(500).json({
             success: false,
-            message: "Error Saving Post"
+            message: "Error Saving Post",
+            error: error.message
         })
     }
 }
 
 //add vote
-const voteOnPost = async(req,res) => {
+const voteOnPost = async(req, res) => {
     try{
         const {postId} = req.params
         const {userId, vote} = req.body
 
-        if(!vote || (vote !== 'real' || vote !== 'fake')){
+        if(!vote || (vote !== 'real' && vote !== 'fake')){  
             return res.status(400).json({
-                success:false,
+                success: false,
                 message: "Invalid Vote"
             })
         }
@@ -371,44 +377,36 @@ const voteOnPost = async(req,res) => {
         const postDoc = await discountCollection.doc(postId).get()
         if(!postDoc.exists){
             return res.status(404).json({
-                success:false,
-                message:"Post Not Found"
-            })
-        }
-        //check user
-        const userDoc = await userCollection.doc(userId).get()
-        if(!userDoc.exists){
-            return res.status(404).json({
-                success:false,
-                message: "User Not Found"
+                success: false,
+                message: "Post Not Found"
             })
         }
 
         //check existing vote
         const existingVote = await interactionsCollection
-        .where('postId', '==', postId)
-        .where('userId', '==', userId)
-        .where('type', '==', 'vote')
-        .limit(1)
-        .get()
+            .where('postId', '==', postId)
+            .where('userId', '==', userId)
+            .where('type', '==', 'vote')
+            .limit(1)
+            .get()
 
         const postData = postDoc.data()
-        const currentVotes = postData.votes() || {real:0, fake:0, total:0}
+        const currentVotes = postData.votes || {real: 0, fake: 0, total: 0} 
 
-        if(!existingVote.exists){
+        if(!existingVote.empty){  
             //update vote
             let oldVote
             let voteDocId
 
             existingVote.forEach(doc => {
-                oldVote = doc.data().voteValue,
+                oldVote = doc.data().voteValue
                 voteDocId = doc.id
             })
 
             //if same vote do nothing
-            if(oldVote == vote){
+            if(oldVote === vote){  
                 return res.status(200).json({
-                    success:true,
+                    success: true,
                     message: "Vote Already Registered",
                     votes: currentVotes
                 })
@@ -416,7 +414,7 @@ const voteOnPost = async(req,res) => {
 
             await interactionsCollection.doc(voteDocId).update({
                 voteValue: vote,
-                updateAt: new Date().toISOString()
+                updatedAt: new Date().toISOString() 
             })
 
             const newVotes = {
@@ -426,10 +424,11 @@ const voteOnPost = async(req,res) => {
             }
 
             newVotes[vote] += 1
+            
             await discountCollection.doc(postId).update({
                 votes: newVotes,
                 verificationStatus: calculateVerificationStatus(newVotes),
-                updateAt: new Date().toISOString()
+                updatedAt: new Date().toISOString()  
             })
 
             return res.status(200).json({
@@ -438,8 +437,7 @@ const voteOnPost = async(req,res) => {
                 votes: newVotes,
                 verificationStatus: calculateVerificationStatus(newVotes)
             })
-
-        }else{
+        } else {
             //new vote
             await interactionsCollection.add({
                 postId,
@@ -452,17 +450,17 @@ const voteOnPost = async(req,res) => {
             const newVotes = {
                 real: vote === 'real' ? currentVotes.real + 1 : currentVotes.real,
                 fake: vote === 'fake' ? currentVotes.fake + 1 : currentVotes.fake,
-                total: currentVotes.total
+                total: currentVotes.total + 1  
             }
 
-            await interactionsCollection.doc(postId).update({
+            await discountCollection.doc(postId).update({ 
                 votes: newVotes,
                 verificationStatus: calculateVerificationStatus(newVotes),
-                updateAt: new Date().toISOString()
+                updatedAt: new Date().toISOString()  
             })
 
             return res.status(200).json({
-                success:true,
+                success: true,
                 message: "Vote Recorded",
                 votes: newVotes,
                 verificationStatus: calculateVerificationStatus(newVotes)
@@ -471,7 +469,7 @@ const voteOnPost = async(req,res) => {
     }
     catch(error){
         res.status(500).json({
-            success: true,
+            success: false,  
             message: "Error Voting On Post",
             error: error.message
         })
@@ -479,17 +477,25 @@ const voteOnPost = async(req,res) => {
 }
 
 //add message
-const addMessage = async(req,res) => {
+const addMessage = async(req, res) => {
     try{
-        const {postId} = req.params;
-        const {userId} = req.body;
+        const {postId} = req.params
+        const {userId, message} = req.body 
+
+        //validate message
+        if(!message || message.trim() === ''){
+            return res.status(400).json({
+                success: false,
+                message: "Message cannot be empty"
+            })
+        }
 
         //check post 
         const postDoc = await discountCollection.doc(postId).get()
         if(!postDoc.exists){
             return res.status(404).json({
-                success:false,
-                message: "No Post Found",
+                success: false,
+                message: "No Post Found"
             })
         }
         
@@ -512,13 +518,13 @@ const addMessage = async(req,res) => {
             userAvatar: userData.avatarUrl || '',
             message: message.trim(),
             createdAt: new Date().toISOString(),
-            updateAt: new Date().toISOString()
+            updatedAt: new Date().toISOString()  
         }
 
-        const docref = await messagesCollection.add(messageData)
+        const docRef = await messagesCollection.add(messageData)
 
-        //update message content 
-        const currentMessages = postData.data().message || 0
+        //update message count 
+        const currentMessages = postDoc.data().messages || 0  
         await discountCollection.doc(postId).update({
             messages: currentMessages + 1
         })
@@ -527,11 +533,10 @@ const addMessage = async(req,res) => {
             success: true,
             message: "Message Added",
             data: {
-                id: docref.id,
+                id: docRef.id,
                 ...messageData
             }
         })
-
     }
     catch(error){
         res.status(500).json({
@@ -543,46 +548,40 @@ const addMessage = async(req,res) => {
 }
 
 //get the message for post
-const getPostMessages = async(req,res) => {
+const getPostMessages = async(req, res) => {
     try{
         const {postId} = req.params
-        //check post
-        const postDoc = await discountCollection.doc(postId).get()
-        if(!postDoc.exists){
-            return res.status(404).json({
-                success: false,
-                message: "Post Not Found"
-            })
-        }
+        
         const snapshot = await messagesCollection
-        .where('postId', '==', postId)
-        .orderBy('createdAt','asc')
-        .get()
+            .where('postId', '==', postId)
+            .orderBy('createdAt', 'asc')
+            .get()
 
-        const message = []
+        const messages = []  
         snapshot.forEach(doc => {
-            message.push({
+            messages.push({
                 id: doc.id,
                 ...doc.data()
             })
         })
+        
         res.status(200).json({
-            success:true,
-            count: message.length,
-            data: message
+            success: true,
+            count: messages.length,
+            data: messages
         })
     }
     catch(error){
         res.status(500).json({
             success: false,
-            message: "Error Getting Post Message",
+            message: "Error Getting Post Messages",
             error: error.message
         })
     }
 }
 
 //delete post
-const deleteDiscount = async(req,res) => {
+const deleteDiscount = async(req, res) => {
     try{
         const {postId} = req.params
 
@@ -590,17 +589,18 @@ const deleteDiscount = async(req,res) => {
         const postDoc = await discountCollection.doc(postId).get()
         if(!postDoc.exists){
             return res.status(404).json({
-                success:false,
+                success: false,
                 message: "Post Not Found"
             })
         }
+        
         //delete image if applicable
         const imageUrl = postDoc.data().imageUrl
         if(imageUrl){
             try{
                 const urlParts = imageUrl.split('/')
                 const filename = urlParts[urlParts.length - 1]
-                await bucket.file(`discount-posts/${decodeURIComponent(filename)}`)
+                await bucket.file(`discount-posts/${decodeURIComponent(filename)}`).delete()  
             }
             catch(error){
                 console.error('Error Deleting Image:', error)
@@ -609,17 +609,17 @@ const deleteDiscount = async(req,res) => {
 
         //deleting all interactions
         const interactions = await interactionsCollection
-        .where('postId', '==', postId)
-        .get()
+            .where('postId', '==', postId)
+            .get()
 
         interactions.forEach(async (doc) => {
-            await interactions.doc(doc.id).delete()
+            await interactionsCollection.doc(doc.id).delete()  
         })
 
         //delete all messages
         const messages = await messagesCollection
-        .where('postId', '==', postId)
-        .get()
+            .where('postId', '==', postId)
+            .get()
 
         messages.forEach(async (doc) => {
             await messagesCollection.doc(doc.id).delete()
@@ -629,8 +629,8 @@ const deleteDiscount = async(req,res) => {
         await discountCollection.doc(postId).delete()
 
         res.status(200).json({
-            success:true,
-            message:"Post Deleted Successfully"
+            success: true,
+            message: "Post Deleted Successfully"
         })
     }
     catch(error){
@@ -652,9 +652,9 @@ function calculateVerificationStatus(votes){
     
     if(realPercentage >= 70){
         return 'verified'
-    }else if(realPercentage <= 30){
+    } else if(realPercentage <= 30){
         return 'fake'
-    }else{
+    } else {
         return 'unverified'
     }
 }
