@@ -9,14 +9,14 @@ router.get('/user/:userId/details', goalController.getUserWithGoals)
 //get user with motivationg with minimal detail
 router.get('/user/:userId', goalController.getGoalsByUserId) 
 //get specific motivation ahahah
-router.get('/:id', goalController.getGoalById)
+router.get('/:goalId', goalController.getGoalById)
 //create a motivation little one
 router.post('/user/:userId', goalController.createGoal)
 //update your motivation progress little one
-router.post('/:id/progress', goalController.addProgress)
+router.post('/:goalId/progress', goalController.addProgress)
 //update your crypto lmmao
-router.put('/:id', goalController.updateGoals)
+router.put('/:goalId', goalController.updateGoals)
 //why woud you delete it?
-router.delete('/:id', goalController.deleteGoal)
+router.delete('/:goalId', goalController.deleteGoal)
 
 module.exports = router
