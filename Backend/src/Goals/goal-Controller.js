@@ -88,9 +88,9 @@ const getGoalsByUserId = async(req,res) => {
 //get goal by id
 const getGoalById = async (req,res) => {
     try{
-        const { id } = req.params  
+        const { goalId } = req.params  
 
-        const goalDoc = await goalCollection.doc(id).get()
+        const goalDoc = await goalCollection.doc(goalId).get()
         if(!goalDoc.exists){
             return res.status(404).json({
                 success:false,
