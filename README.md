@@ -104,6 +104,7 @@ Student_Finance/
 
 ### Running Tests
 ```bash
+# from the project root directory
 npm test
 ```
 
