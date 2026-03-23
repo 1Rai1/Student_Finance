@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**StudiFi** is a comprehensive React Native mobile application for student finance management, featuring a robust Node.js backend API with Firebase integration. This project provides a complete financial management solution designed specifically for students, with advanced testing infrastructure and modern development practices.
+**StudiFi** is a comprehensive React Native mobile application for student finance management, featuring a robust Node.js backend API with Firebase integration. This project provides a complete financial management solution designed specifically for students, with a comprehensive testing infrastructure and modern development practices.
 
 ### Architecture
 
@@ -10,14 +10,14 @@
 - **State Management**: Custom hooks for API integration (useAuth, useGoals, useExpenses, useDiscounts, useAdmin)
 - **Navigation**: React Navigation with tab-based interface
 - **Styling**: Modular global styles with consistent design system
-- **Testing**: React Native Testing Library with comprehensive integration tests
+- **Testing**: Custom automated test suite for API integration validation
 
 **Backend**: Node.js with Express and Firebase
 - **Database**: Firebase Firestore for scalable data storage
 - **Authentication**: Firebase Authentication with JWT tokens
 - **File Storage**: Firebase Storage for image uploads
 - **API**: RESTful endpoints with proper validation and error handling
-- **Testing**: Dual test suite system for comprehensive coverage
+- **Testing**: Comprehensive automated test suite for API validation
 
 ### Key Features
 
@@ -60,16 +60,14 @@ Student_Finance/
 │   │   ├── Lessons/        # Admin lesson management
 │   │   └── Middleware/     # File upload handling
 │   ├── firebase/           # Firebase configuration
-│   └── server.js          # Main server file
+│   └── server.js           # Main server file
 ├── Frontend/
 │   ├── src/
 │   │   ├── hooks/         # React hooks for API integration
 │   │   ├── navbar/        # Navigation components
 │   │   └── styles/        # Styling
 │   └── assets/            # App assets (icons, logos)
-├── automated-tests.js     # Backend test suite
-├── automated-tests-frontend.js  # Frontend test suite
-└── automated-tests-frontend-integration.js  # Frontend component integration test suite
+└── test-suite.js          # Comprehensive test suite
 ```
 
 ## Getting Started
@@ -106,14 +104,8 @@ Student_Finance/
 
 ### Running Tests
 ```bash
-node automated-tests.js
-node automated-tests-frontend.js
+npm test
 ```
-
-#### Adding New Tests
-- **Backend tests**: Add to `automated-tests.js` in appropriate module section
-- **Frontend tests**: Add to `automated-tests-frontend.js` in relevant hook section
-
 
 ## API Endpoints
 

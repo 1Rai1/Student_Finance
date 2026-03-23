@@ -1,6 +1,31 @@
 {
+  "name": "student-finance-test-suite",
+  "version": "1.0.0",
+  "description": "Comprehensive test suite for Student Finance System",
+  "main": "test-suite.js",
+  "scripts": {
+    "test": "node test-suite.js",
+    "test:watch": "nodemon test-suite.js",
+    "test:backend": "cd Backend && npm test",
+    "test:frontend": "cd Frontend && npm test"
+  },
+  "keywords": [
+    "student-finance",
+    "test-suite",
+    "automated-tests",
+    "api-testing",
+    "integration-tests"
+  ],
+  "author": "Student Finance Team",
+  "license": "MIT",
   "dependencies": {
-    "jest": "^30.3.0",
-    "node-fetch": "^3.3.2"
+    "axios": "^1.7.2",
+    "form-data": "^4.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
