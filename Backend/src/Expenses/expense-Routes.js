@@ -10,6 +10,8 @@ router.get('/user/:userId', expenseController.getExpenseByUserId);
 router.get('/:id', expenseController.getExpenseById);
 //create expense
 router.post('/user/:userId', expenseController.createExpense);
+//update expense
+router.put('/:expenseId', expenseController.updateExpense);
 //delete expenese
 router.delete('/:expenseId', expenseController.deleteExpense);
 

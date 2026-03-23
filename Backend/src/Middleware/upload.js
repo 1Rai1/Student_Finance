@@ -1,21 +1,21 @@
-const multer = require('multer')  // ← FIX: Remove {}
-const path = require('path')      // ← FIX: Remove {}
+const multer = require('multer');
+const path = require('path');
 
 //config storage
-const storage = multer.memoryStorage()  // Store memory for processing
+const storage = multer.memoryStorage();  // Store memory for processing
 
 //file filter
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp/
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase())
-    const mimetype = allowedTypes.test(file.mimetype)
+    const allowedTypes = /jpeg|jpg|png|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
 
     if (mimetype && extname) {
-        return cb(null, true)  // ← FIX: cb(null, true) not (cb, null)
+        cb(null, true);
     } else {
-        cb(new Error('Only Images can be uploaded'))
+        cb(new Error('Only Images can be uploaded'));
     }
-}
+};
 
 const upload = multer({
     storage: storage,
@@ -23,6 +23,6 @@ const upload = multer({
         fileSize: 5 * 1024 * 1024  // 5mb
     },
     fileFilter: fileFilter 
-})
+});
 
-module.exports = upload
+module.exports = upload;
