@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router()
 const goalController = require('./goal-Controller')
 
+
 //get the all goals
 router.get('/', goalController.getAllGoals) 
 //get them user with all their  motivations details

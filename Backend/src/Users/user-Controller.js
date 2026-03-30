@@ -72,7 +72,7 @@ const getUserById = async (req, res) => {
 //Create User
 const createUser = async (req, res) => {
     try{
-        const {name, email, password, role, age, monthlyBudget} = req.body
+        const {name, email, password, age, monthlyBudget} = req.body
 
         if(!name || !email || !password){
             return res.status(400).json({
@@ -94,7 +94,7 @@ const createUser = async (req, res) => {
             email,
             password,
             age: age || null,
-            role: role || 'user',
+            role:'user',
             monthlyBudget: monthlyBudget ? parseFloat(monthlyBudget) : 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -112,10 +112,60 @@ const createUser = async (req, res) => {
         })
     }
     catch(error){
-        console.error('Full error:', error);
         res.status(500).json({
             success: false,
             message: "Error Creating User",
+            error: error.message
+        })
+    }
+}
+
+//Create Admin
+const createAdmin = async (req, res) => {
+    try{
+        const {name, email, password, age} = req.body
+
+        if(!name || !email || !password){
+            return res.status(400).json({
+                success: false,
+                message: "Credentials required"
+            })
+        }
+
+        const existingUser = await userCollection.where('email', '==', email).get()  
+        if(!existingUser.empty){
+            return res.status(400).json({
+                success: false,
+                message: "User already exists"
+            })
+        }
+        
+        const userData = {
+            name,
+            email,
+            password,
+            age: age || null,
+            role:'admin',
+            monthlyBudget: monthlyBudget ? parseFloat(monthlyBudget) : 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        }
+        
+        const docRef = await userCollection.add(userData)
+
+        res.status(201).json({
+            success: true,
+            message: "Admin Created Successfully",
+            data: {
+                id: docRef.id,
+                ...userData
+            }
+        })
+    }
+    catch(error){
+        res.status(500).json({
+            success: false,
+            message: "Error Creating Admin",
             error: error.message
         })
     }
@@ -223,7 +273,6 @@ const getUsersByQuery = async (req, res) => {
             query = query.where('role', '==', role)
         }
 
-    
         if (name) {
             query = query.where('name', '==', name)
         }
