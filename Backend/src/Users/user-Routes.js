@@ -1,27 +1,35 @@
-const express = require('express')
-const router = express.Router()
-const userController = require('./user-Controller')
-const checkAdmin = require('./../Middleware/checkAdmin') 
+// routes/userRoutes.js
+const express = require('express');
+const router = express.Router();
+const {
+    getAllUser,
+    getUsersByQuery,
+    getUserById,
+    updateUser,
+    deleteUser
+} = require('./user-Controller');
+
+const { verifyToken, verifyAdmin, verifyOwnership } = require('../Middleware/auth');
+const { strictLimiter, readLimiter } = require('../Middleware/rateLimiter');
 
 // ==========================================
-// PUBLIC ROUTES
+// ADMIN ROUTES (Protected - Admin Only)
 // ==========================================
-router.post('/create', userController.createUser);  // Anyone can register
+
+// All admin routes require authentication + admin role
+router.get('/admin/all', verifyToken, verifyAdmin, readLimiter, getAllUser);
+router.get('/admin/query', verifyToken, verifyAdmin, readLimiter, getUsersByQuery);
+router.get('/admin/:id', verifyToken, verifyAdmin, readLimiter, getUserById);
+router.put('/admin/:id', verifyToken, verifyAdmin, strictLimiter, updateUser);
+router.delete('/admin/:id', verifyToken, verifyAdmin, strictLimiter, deleteUser);
 
 // ==========================================
-// ADMIN ROUTES (Protected)
+// USER ROUTES (Protected - Self Only)
 // ==========================================
-router.get('/admin/:adminId/all', checkAdmin, userController.getAllUser);
-router.get('/admin/:adminId/query', checkAdmin, userController.getUsersByQuery);
-router.get('/admin/:adminId/user/:id', checkAdmin, userController.getUserById);
-router.put('/admin/:adminId/user/:id', checkAdmin, userController.updateUser);
-router.delete('/admin/:adminId/user/:id', checkAdmin, userController.deleteUser);
 
-// ==========================================
-// USER ROUTES (Self-management)
-// ==========================================
-router.get('/:id', userController.getUserById);       // View own profile
-router.put('/:id', userController.updateUser);        // Update own profile
-router.delete('/:id', userController.deleteUser);     // Delete own account
+// Users can only manage their own resources
+router.get('/:id', verifyToken, verifyOwnership, readLimiter, getUserById);
+router.put('/:id', verifyToken, verifyOwnership, strictLimiter, updateUser);
+router.delete('/:id', verifyToken, verifyOwnership, strictLimiter, deleteUser);
 
-module.exports = router
+module.exports = router;

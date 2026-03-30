@@ -12,6 +12,7 @@ const goalRoutes = require('./src/Goals/goal-Routes')
 const expenseRoutes = require('./src/Expenses/expense-Routes')
 const discountRoutes = require('./src/Discounts/discount-Routes')
 const lessonRoutes = require('./src/Lessons/lesson-Routes')
+const authRoutes = require('./src/Auth/auth-Routes')
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use('/api/goal', goalRoutes)
 app.use('/api/expense', expenseRoutes)
 app.use('/api/discount', discountRoutes)
 app.use('/api/lesson', lessonRoutes)
+app.use('/api/auth', authRoutes)
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -49,15 +51,20 @@ app.get('/health', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Student Finance Backend API',
-    version: '1.0.0',
-    endpoints: {
-      students: '/api/students',
-      health: '/health'
-    }
-  });
+    res.json({
+        message: 'Student Finance API with Firebase Auth',
+        endpoints: {
+            auth: {
+                register: 'POST /api/auth/register',
+                me: 'GET /api/auth/me (Protected)',
+                delete: 'DELETE /api/auth/delete (Protected)'
+            },
+            users: {
+                admin: 'GET/PUT/DELETE /api/users/admin/* (Admin only)',
+                self: 'GET/PUT/DELETE /api/users/:id (Own resources)'
+            }
+        }
+    });
 });
 
 
