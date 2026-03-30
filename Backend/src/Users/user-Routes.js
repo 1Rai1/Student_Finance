@@ -1,18 +1,35 @@
-const express = require('express')
-const router = express.Router()
-const userController = require('./user-Controller')
+// routes/userRoutes.js
+const express = require('express');
+const router = express.Router();
+const {
+    getAllUser,
+    getUsersByQuery,
+    getUserById,
+    updateUser,
+    deleteUser
+} = require('./user-Controller');
 
-//get All Users
-router.get('/', userController.getAllUser)
-//serach user
-router.get('/query', userController.getUsersByQuery)
-//get Specific user
-router.get('/:id', userController.getUserById)
-//create user
-router.post('/create', userController.createUser)
-//update user
-router.put('/:id', userController.updateUser)
-//delete user
-router.delete('/:id', userController.deleteUser)
+const { verifyToken, verifyAdmin, verifyOwnership } = require('../Middleware/auth');
+const { strictLimiter, readLimiter } = require('../Middleware/rateLimiter');
 
-module.exports = router
+// ==========================================
+// ADMIN ROUTES (Protected - Admin Only)
+// ==========================================
+
+// All admin routes require authentication + admin role
+router.get('/admin/all', verifyToken, verifyAdmin, readLimiter, getAllUser);
+router.get('/admin/query', verifyToken, verifyAdmin, readLimiter, getUsersByQuery);
+router.get('/admin/:id', verifyToken, verifyAdmin, readLimiter, getUserById);
+router.put('/admin/:id', verifyToken, verifyAdmin, strictLimiter, updateUser);
+router.delete('/admin/:id', verifyToken, verifyAdmin, strictLimiter, deleteUser);
+
+// ==========================================
+// USER ROUTES (Protected - Self Only)
+// ==========================================
+
+// Users can only manage their own resources
+router.get('/:id', verifyToken, verifyOwnership, readLimiter, getUserById);
+router.put('/:id', verifyToken, verifyOwnership, strictLimiter, updateUser);
+router.delete('/:id', verifyToken, verifyOwnership, strictLimiter, deleteUser);
+
+module.exports = router;
