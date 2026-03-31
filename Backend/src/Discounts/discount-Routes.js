@@ -13,6 +13,8 @@ router.get('/:postId',readLimiter, discountController.getDiscountById);
 router.get('/:postId/messages',readLimiter, discountController.getPostMessages);
 // Create post (title, description, location, optional image)
 router.post('/user/:userId',strictLimiter, upload.single('image'), discountController.createDiscount);
+//Search for a post
+router.get('/search', readLimiter,discountController.filterPost); 
 // Like a post
 router.post('/:postId/like',strictLimiter, discountController.likePost);
 // Save a post

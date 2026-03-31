@@ -106,6 +106,99 @@ const createDiscount = async(req, res) => {
     }
 }
 
+// Filter/Search posts
+const filterPost = async (req, res) => {
+    try {
+        const { userId, title, location } = req.query; // ← Use query params, not body
+
+        // Check if at least one search parameter provided
+        if (!userId && !title && !location) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide at least one search parameter: userId, title, or location"
+            });
+        }
+
+        let posts = [];
+
+        // Search by userId
+        if (userId) {
+            const userDoc = await userCollection.doc(userId).get();
+            if (!userDoc.exists) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User Not Found"
+                });
+            }
+
+            const snapshot = await discountCollection
+                .where('userId', '==', userId)
+                .orderBy('createdAt', 'desc')
+                .get();
+
+            snapshot.forEach(doc => {
+                posts.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+        }
+        // Search by title 
+        else if (title) {
+            // Get all posts and filter in memory (Firestore doesn't support partial text search)
+            const snapshot = await discountCollection
+                .orderBy('createdAt', 'desc')
+                .get();
+
+            snapshot.forEach(doc => {
+                const postData = doc.data();
+                // Case-insensitive partial match
+                if (postData.title && postData.title.toLowerCase().includes(title.toLowerCase())) {
+                    posts.push({
+                        id: doc.id,
+                        ...postData
+                    });
+                }
+            });
+        }
+        else if (location) {
+            const snapshot = await discountCollection
+                .orderBy('createdAt', 'desc')
+                .get();
+
+            snapshot.forEach(doc => {
+                const postData = doc.data();
+                // Case-insensitive partial match
+                if (postData.location && postData.location.toLowerCase().includes(location.toLowerCase())) {
+                    posts.push({
+                        id: doc.id,
+                        ...postData
+                    });
+                }
+            });
+        }
+        // No results found
+        if (posts.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No posts found matching your search"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            count: posts.length,
+            data: posts
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error Filtering Posts",
+            error: error.message
+        });
+    }
+}
+
 //get all the discount post
 const getAllDiscount = async(req, res) => {
     try{
@@ -668,5 +761,6 @@ module.exports = {
     voteOnPost,
     addMessage,
     getPostMessages,
-    deleteDiscount
+    deleteDiscount,
+    filterPost
 }
