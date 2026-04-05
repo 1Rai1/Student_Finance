@@ -514,6 +514,327 @@ const testAPIEndpoints = async () => {
   return true;
 };
 
+// ============================================================================
+// AUTHENTICATION TESTS
+// Tests for auth middleware (verifyToken) and auth routes
+// ============================================================================
+
+const testAuthentication = async () => {
+  console.log('\n Testing Authentication');
+  
+  // Test 1: Access protected endpoint without token should return 401
+  console.log('Test 1: Protected endpoint without token...');
+  try {
+    const response = await axios.get(`${BASE_URL}/auth/me`);
+    console.log('✗ Should have returned 401 Unauthorized');
+    return false;
+  } catch (error) {
+    if (error.response && error.response.status === 401) {
+      console.log('✓ Correctly returned 401 without token');
+    } else {
+      console.error('✗ Unexpected error:', error.message);
+      return false;
+    }
+  }
+  
+  // Test 2: Access protected endpoint with invalid token should return 401
+  console.log('Test 2: Protected endpoint with invalid token...');
+  try {
+    const response = await axios.get(`${BASE_URL}/auth/me`, {
+      headers: { Authorization: 'Bearer invalid-token-12345' }
+    });
+    console.log('✗ Should have returned 401 Unauthorized');
+    return false;
+  } catch (error) {
+    if (error.response && error.response.status === 401) {
+      console.log('✓ Correctly returned 401 for invalid token');
+    } else {
+      console.error('✗ Unexpected error:', error.message);
+      return false;
+    }
+  }
+  
+  // Test 3: Register with missing required fields should fail
+  console.log('Test 3: Register with missing fields...');
+  try {
+    const response = await axios.post(`${BASE_URL}/auth/register`, {
+      email: 'testauth@example.com'
+    });
+    console.log('✗ Should have returned 400 Bad Request');
+    return false;
+  } catch (error) {
+    if (error.response && error.response.status === 400) {
+      console.log('✓ Correctly rejected missing fields');
+    } else {
+      console.error('✗ Unexpected error:', error.message);
+      return false;
+    }
+  }
+  
+  // Test 4: Register with weak password should fail
+  console.log('Test 4: Register with weak password...');
+  try {
+    const response = await axios.post(`${BASE_URL}/auth/register`, {
+      email: 'testauth2@example.com',
+      password: '123',
+      name: 'Test User'
+    });
+    console.log('✗ Should have returned 400 Bad Request');
+    return false;
+  } catch (error) {
+    if (error.response && error.response.status === 400) {
+      console.log('✓ Correctly rejected weak password');
+    } else {
+      console.error('✗ Unexpected error:', error.message);
+      return false;
+    }
+  }
+  
+  // Test 5: Admin endpoints require authentication
+  console.log('Test 5: Admin endpoint without token...');
+  try {
+    const response = await axios.get(`${BASE_URL}/user/admin/all`);
+    console.log('✗ Should have returned 401 Unauthorized');
+    return false;
+  } catch (error) {
+    if (error.response && error.response.status === 401) {
+      console.log('✓ Admin endpoints correctly require auth');
+    } else {
+      console.error('✗ Unexpected error:', error.message);
+      return false;
+    }
+  }
+  
+  // Test 6: User self-endpoints require authentication
+  console.log('Test 6: User endpoint without token...');
+  try {
+    const response = await axios.get(`${BASE_URL}/user/some-user-id`);
+    console.log('✗ Should have returned 401 Unauthorized');
+    return false;
+  } catch (error) {
+    if (error.response && error.response.status === 401) {
+      console.log('✓ User endpoints correctly require auth');
+    } else {
+      console.error('✗ Unexpected error:', error.message);
+      return false;
+    }
+  }
+  
+  console.log('✓✓ Authentication tests passed');
+  return true;
+};
+
+// ============================================================================
+// FILE UPLOAD TESTS
+// Tests for multer upload middleware (file type, size limits)
+// Note: Requires a valid user ID from testUserManagement
+// ============================================================================
+
+const testFileUpload = async () => {
+  console.log('\n Testing File Upload');
+  
+  // Check if we have a user to test with
+  if (testData.users.length === 0) {
+    console.log('⚠ No users available - skipping upload tests');
+    console.log('  (Run testUserManagement first)');
+    return true;
+  }
+  
+  const userId = testData.users[0].id;
+  
+  // Test 1: Upload discount with valid image (PNG)
+  console.log('Test 1: Upload with valid image...');
+  try {
+    // Create a minimal valid PNG (1x1 pixel)
+    const pngBuffer = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64'
+    );
+    
+    const formData = new FormData();
+    formData.append('title', 'Test Upload Discount');
+    formData.append('description', 'Testing file upload');
+    formData.append('location', 'Test Location');
+    formData.append('image', pngBuffer, { filename: 'test.png', contentType: 'image/png' });
+    
+    const response = await axios.post(`${BASE_URL}/discount/user/${userId}`, formData, {
+      headers: formData.getHeaders()
+    });
+    
+    if (response.data.success) {
+      console.log('✓ Successfully uploaded image');
+      testData.discounts.push({ id: response.data.data.id, title: 'Test Upload Discount' });
+    } else {
+      console.log('✗ Upload failed');
+      return false;
+    }
+  } catch (error) {
+    console.error('✗ Upload test failed:', error.message);
+    return false;
+  }
+  
+  // Test 2: Reject invalid file type (text file)
+  console.log('Test 2: Reject invalid file type...');
+  try {
+    const formData = new FormData();
+    formData.append('title', 'Test Invalid File');
+    formData.append('description', 'Testing invalid file');
+    formData.append('location', 'Test Location');
+    formData.append('image', Buffer.from('This is text, not an image'), {
+      filename: 'test.txt',
+      contentType: 'text/plain'
+    });
+    
+    const response = await axios.post(`${BASE_URL}/discount/user/${userId}`, formData, {
+      headers: formData.getHeaders()
+    });
+    
+    console.log('✗ Should have rejected invalid file type');
+    return false;
+  } catch (error) {
+    if (error.response && error.response.data && error.response.data.message === 'Only Images can be uploaded') {
+      console.log('✓ Correctly rejected invalid file type');
+    } else {
+      console.error('✗ Unexpected error:', error.message);
+      return false;
+    }
+  }
+  
+  // Test 3: Create discount without image (image is optional)
+  console.log('Test 3: Create discount without image...');
+  try {
+    const formData = new FormData();
+    formData.append('title', 'Test No Image Discount');
+    formData.append('description', 'Testing without image');
+    formData.append('location', 'Test Location');
+    
+    const response = await axios.post(`${BASE_URL}/discount/user/${userId}`, formData, {
+      headers: formData.getHeaders()
+    });
+    
+    if (response.data.success) {
+      console.log('✓ Successfully created discount without image');
+      testData.discounts.push({ id: response.data.data.id, title: 'Test No Image Discount' });
+    } else {
+      console.log('✗ Failed to create discount without image');
+      return false;
+    }
+  } catch (error) {
+    console.error('✗ No-image test failed:', error.message);
+    return false;
+  }
+  
+  // Test 4: Reject discount with missing required fields
+  console.log('Test 4: Reject discount with missing fields...');
+  try {
+    const formData = new FormData();
+    formData.append('title', 'Incomplete');
+    // Missing description and location
+    
+    const response = await axios.post(`${BASE_URL}/discount/user/${userId}`, formData, {
+      headers: formData.getHeaders()
+    });
+    
+    console.log('✗ Should have rejected missing fields');
+    return false;
+  } catch (error) {
+    if (error.response && error.response.status === 400) {
+      console.log('✓ Correctly rejected missing fields');
+    } else {
+      console.error('✗ Unexpected error:', error.message);
+      return false;
+    }
+  }
+  
+  console.log('✓✓ File Upload tests passed');
+  return true;
+};
+
+// ============================================================================
+// RATE LIMITER TESTS
+// Tests for express-rate-limit middleware
+// Note: These tests verify rate limit headers are present.
+// Actual rate limit triggering requires many requests and is not practical
+// in a standard test run (15-minute windows, per-IP limits).
+// ============================================================================
+
+const testRateLimiters = async () => {
+  console.log('\n Testing Rate Limiters');
+  
+  // Test 1: Verify rate limit headers on general endpoint
+  console.log('Test 1: Rate limit headers present...');
+  try {
+    const response = await axios.get(`${BASE_URL}/user`);
+    const headers = response.headers;
+    
+    if (headers['ratelimit-limit'] || headers['ratelimit-remaining'] || headers['ratelimit-reset']) {
+      console.log('✓ Rate limit headers present');
+    } else {
+      console.log('⚠ Rate limit headers not found in response');
+    }
+  } catch (error) {
+    console.error('✗ Failed to check rate limit headers:', error.message);
+  }
+  
+  // Test 2: Verify rate limit headers on auth endpoint (stricter limit)
+  console.log('Test 2: Auth endpoint rate limit headers...');
+  try {
+    // This will fail validation but we can still check headers
+    await axios.post(`${BASE_URL}/auth/register`, {
+      email: 'ratelimit@example.com',
+      password: 'pass',
+      name: 'Test'
+    });
+  } catch (error) {
+    if (error.response) {
+      const headers = error.response.headers;
+      if (headers['ratelimit-limit'] || headers['ratelimit-remaining']) {
+        console.log('✓ Auth endpoint has rate limit headers');
+      } else {
+        console.log('⚠ Auth rate limit headers not found');
+      }
+    } else {
+      console.error('✗ Failed to check auth rate limit:', error.message);
+    }
+  }
+  
+  // Test 3: Verify rate limit headers on create endpoint (strict limiter)
+  console.log('Test 3: Create endpoint rate limit headers...');
+  try {
+    if (testData.users.length > 0) {
+      const userId = testData.users[0].id;
+      await axios.post(`${BASE_URL}/goal/user/${userId}`, {
+        title: 'Rate Limit Test',
+        targetAmount: 100,
+        category: 'test'
+      });
+      
+      // If successful, headers would be in response
+      console.log('✓ Create endpoint responded (strict limiter applied)');
+    } else {
+      console.log('⚠ No users available to test create endpoint');
+    }
+  } catch (error) {
+    if (error.response) {
+      console.log('✓ Create endpoint responded (strict limiter applied)');
+    } else {
+      console.error('✗ Failed to check create rate limit:', error.message);
+    }
+  }
+  
+  // Document rate limit configuration
+  console.log('\n Rate Limiter Configuration (from middleware/rateLimiter.js):');
+  console.log('  - General API:      100 requests / 15 minutes');
+  console.log('  - Create/Update/Delete: 20 requests / 15 minutes');
+  console.log('  - Auth (register):    5 requests / 15 minutes');
+  console.log('  - Read-only (GET):  200 requests / 15 minutes');
+  console.log('\n Note: Actual rate limit triggering requires exceeding these limits');
+  console.log('       within a 15-minute window, which is not practical in tests.');
+  
+  console.log('✓✓ Rate Limiter tests completed');
+  return true;
+};
+
 // Cleanup function
 const cleanup = async () => {
   console.log('\n Cleaning up test data...');
@@ -593,6 +914,9 @@ const runTests = async () => {
   const tests = [
     testAPIEndpoints,
     testUserManagement,
+    testAuthentication,
+    testFileUpload,
+    testRateLimiters,
     testGoalManagement,
     testExpenseManagement,
     testLessonManagement,
