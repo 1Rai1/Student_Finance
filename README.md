@@ -119,7 +119,7 @@ The test suite includes 21 tests covering:
 - API endpoints (health check, discount routes)
 - Middleware configuration (exports, functions)
 
-**Note:** Tests use mocked Firebase Admin to run without real Firebase credentials, but test your actual backend code (middleware, routes, controllers).
+**Note:** Tests use mocked Firebase Admin to run without real Firebase credentials, but test the actual backend code (middleware, routes, controllers).
 
 ## API Endpoints
 
