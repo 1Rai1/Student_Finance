@@ -98,6 +98,7 @@ export const INPUT = {
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E9ECEF',
+    position: 'relative'
   },
   field: {
     flex: 1,

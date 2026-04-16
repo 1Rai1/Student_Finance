@@ -100,8 +100,35 @@ const verifyOwnership = (req, res, next) => {
     next();
 };
 
+/**
+ * Verify user owns the expense (checks expense document)
+ */
+const verifyExpenseOwnership = async (req, res, next) => {
+    try {
+        const { expenseId } = req.params;
+        if (!expenseId) {
+            return res.status(400).json({ success: false, message: 'Expense ID required' });
+        }
+        const expenseDoc = await db.collection('expenses').doc(expenseId).get();
+        if (!expenseDoc.exists) {
+            return res.status(404).json({ success: false, message: 'Expense not found' });
+        }
+        const expense = expenseDoc.data();
+        if (expense.userId !== req.user.uid && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You can only manage your own expenses.'
+            });
+        }
+        next();
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     verifyToken,
     verifyAdmin,
-    verifyOwnership
+    verifyOwnership,
+    verifyExpenseOwnership
 };

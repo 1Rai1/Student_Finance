@@ -8,6 +8,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BUTTON, INPUT, UTILS, CATEGORIES, BUDGET, 
 //category list
 const CAT_LIST = ['Food', 'Transport', 'Books', 'Entertainment', 'Utilities', 'Other'];
 
+
 export default function ExpensesScreen() {
   const nav = useNavigation();
   const { user, logout } = useAuth();
@@ -32,10 +33,14 @@ export default function ExpensesScreen() {
   };
 
   //set budget
-  const handleBudget = () => {
+  const handleBudget = async () => {
     const num = parseFloat(budgetIn);
     if (isNaN(num) || num <= 0) return Alert.alert('Error', 'Invalid budget');
-    setMonthlyBudget(num); setBudgetIn(''); setShowBudget(false);
+    const success = await setMonthlyBudget(num);
+    if (success) {
+      setBudgetIn('');
+      setShowBudget(false);
+    }
   };
 
   //render expense item
