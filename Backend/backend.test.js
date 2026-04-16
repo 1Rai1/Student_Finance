@@ -244,16 +244,103 @@ describe('Student Finance Backend API Tests', () => {
   // FILE UPLOAD TESTS
   // ==========================================
   describe('File Upload Middleware', () => {
-    test('Upload middleware is configured for image files', () => {
-      const upload = require('./src/Middleware/upload');
-      expect(upload).toBeDefined();
-      expect(typeof upload.single).toBe('function');
+    const upload = require('./src/Middleware/upload');
+    const path = require('path');
+    const fs = require('fs');
+
+    // Setup test route that uses upload middleware
+    beforeAll(() => {
+      app.post('/api/test-upload', upload.single('image'), (req, res) => {
+        if (req.file) {
+          res.status(200).json({
+            success: true,
+            filename: req.file.originalname,
+            size: req.file.size,
+            mimetype: req.file.mimetype
+          });
+        } else {
+          res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+      });
     });
 
-    test('Upload middleware has file size limit of 5MB', () => {
-      const upload = require('./src/Middleware/upload');
-      // Check that upload is configured (multer stores config internally)
-      expect(upload).toBeDefined();
+    test('Middleware correctly accepts valid image files', async () => {
+      // Create a small valid test image buffer (1x1 png)
+      const testPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+      
+      const response = await request(app)
+        .post('/api/test-upload')
+        .attach('image', testPng, 'test-image.png');
+      
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.filename).toBe('test-image.png');
+    });
+
+    test('Middleware rejects non-image file types', async () => {
+      // Try uploading a text file
+      const response = await request(app)
+        .post('/api/test-upload')
+        .attach('image', Buffer.from('this is not an image'), 'document.txt');
+      
+      // Should reject with error
+      expect(response.status).toBe(500);
+      expect(response.text).toContain('Only Images can be uploaded');
+    });
+
+    test('Middleware enforces 5MB file size limit', async () => {
+      // Create 6MB dummy file
+      const largeFile = Buffer.alloc(6 * 1024 * 1024);
+      
+      const response = await request(app)
+        .post('/api/test-upload')
+        .attach('image', largeFile, 'too-big.png');
+      
+      // Should reject with file too large
+      expect(response.status).toBe(500);
+      expect(response.text).toContain('File too large');
+    });
+
+    test('Discount endpoint correctly handles image upload and processing', async () => {
+      // Send a valid discount post WITH an image
+      const testImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+
+      firebaseMock.auth.verifyIdToken.mockResolvedValue({ uid: 'test-uid' });
+
+      const response = await request(app)
+        .post('/api/discount/user/test-uid')
+        .field('title', 'Test Discount with Image')
+        .field('description', 'This discount has an attached image')
+        .field('location', 'Test Location')
+        .attach('image', testImage, 'discount-image.jpg');
+
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
+      
+      // Verify Firebase Storage was called
+      expect(firebaseMock.bucket.file).toHaveBeenCalled();
+      expect(firebaseMock.bucket.file().save).toHaveBeenCalled();
+      expect(firebaseMock.bucket.file().makePublic).toHaveBeenCalled();
+      
+      // Verify image URL is returned
+      expect(response.body.data.imageUrl).toBeDefined();
+      expect(response.body.data.imageUrl).toContain('https://storage.googleapis.com/');
+    });
+
+    test('Discount endpoint works correctly without image upload', async () => {
+      firebaseMock.auth.verifyIdToken.mockResolvedValue({ uid: 'test-uid' });
+
+      const response = await request(app)
+        .post('/api/discount/user/test-uid')
+        .send({
+          title: 'Test Discount No Image',
+          description: 'This discount has no image',
+          location: 'Test Location'
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.imageUrl).toBe('');
     });
   });
 
