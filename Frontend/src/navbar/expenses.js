@@ -8,6 +8,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BUTTON, INPUT, UTILS, CATEGORIES, BUDGET, 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CAT_LIST = ['Food', 'Transport', 'Books', 'Entertainment', 'Utilities', 'Other'];
 
+
 export default function ExpensesScreen() {
   const nav = useNavigation();
   const { user, logout } = useAuth();
