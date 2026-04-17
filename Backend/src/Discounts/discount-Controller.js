@@ -686,11 +686,11 @@ const deleteDiscount = async(req, res) => {
         
         //delete image if applicable
         const imageUrl = postDoc.data().imageUrl
-        if(imageUrl){
+        if(imageUrl && imageUrl.includes('cloudinary.com')){
             try{
                 const urlParts = imageUrl.split('/')
-                const filename = urlParts[urlParts.length - 1]
-                await bucket.file(`discount-posts/${decodeURIComponent(filename)}`).delete()  
+                const publicId = `discount-posts/${urlParts[urlParts.length - 1].split('.')[0]}`
+                await cloudinary.uploader.destroy(publicId)
             }
             catch(error){
                 console.error('Error Deleting Image:', error)
