@@ -14,6 +14,17 @@ const express = require('express');
 // ============================================
 // MOCK FIREBASE ADMIN (before importing app)
 // ============================================
+jest.mock('./src/Middleware/cloudinary', () => ({
+  uploader: {
+    upload: jest.fn().mockResolvedValue({
+      secure_url: 'https://res.cloudinary.com/test-cloud/image/upload/test-image.jpg',
+      public_id: 'student-finance/test-image-123'
+    }),
+    destroy: jest.fn().mockResolvedValue({ result: 'ok' })
+  },
+  config: jest.fn()
+}));
+
 jest.mock('./firebase/firebase-admin', () => {
   const mockAuth = {
     verifyIdToken: jest.fn(),
@@ -307,6 +318,19 @@ describe('Student Finance Backend API Tests', () => {
 
       firebaseMock.auth.verifyIdToken.mockResolvedValue({ uid: 'test-uid' });
 
+      const cloudinary = require('./src/Middleware/cloudinary');
+      
+      // Mock to return properly when upload_stream is called
+      const mockUploadStream = jest.fn((options, callback) => {
+        callback(null, {
+          secure_url: 'https://res.cloudinary.com/test-cloud/image/upload/test-image.jpg',
+          public_id: 'student-finance/test-image-123'
+        });
+        return { end: jest.fn() };
+      });
+      
+      cloudinary.uploader.upload_stream = mockUploadStream;
+
       const response = await request(app)
         .post('/api/discount/user/test-uid')
         .field('title', 'Test Discount with Image')
@@ -317,14 +341,12 @@ describe('Student Finance Backend API Tests', () => {
       expect(response.status).toBe(201);
       expect(response.body.success).toBe(true);
       
-      // Verify Firebase Storage was called
-      expect(firebaseMock.bucket.file).toHaveBeenCalled();
-      expect(firebaseMock.bucket.file().save).toHaveBeenCalled();
-      expect(firebaseMock.bucket.file().makePublic).toHaveBeenCalled();
+      // Verify Cloudinary was called
+      expect(mockUploadStream).toHaveBeenCalled();
       
       // Verify image URL is returned
       expect(response.body.data.imageUrl).toBeDefined();
-      expect(response.body.data.imageUrl).toContain('https://storage.googleapis.com/');
+      expect(response.body.data.imageUrl).toContain('https://res.cloudinary.com/');
     });
 
     test('Discount endpoint works correctly without image upload', async () => {
