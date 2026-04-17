@@ -37,26 +37,40 @@ const createDiscount = async(req, res) => {
 
         //files
         if(req.file){
-            const processedImage = await sharp(req.file.buffer)
-                .resize(1200, 1200, {
-                    fit: 'inside',
-                    withoutEnlargement: true
-                })
-                .jpeg({quality: 90})
-                .toBuffer()
-
-           
-            const filename = `discount-posts/${userId}-${Date.now()}.jpg`;
-            const file = bucket.file(filename);  
-
-            await file.save(processedImage, {
-                metadata: {
-                    contentType: 'image/jpeg'
+            try {
+                let processedImage = req.file.buffer;
+                // Try to use sharp if available, otherwise skip processing
+                try {
+                    const sharp = require('sharp');
+                    processedImage = await sharp(req.file.buffer)
+                        .resize(1200, 1200, {
+                            fit: 'inside',
+                            withoutEnlargement: true
+                        })
+                        .jpeg({quality: 90})
+                        .toBuffer();
+                } catch (sharpErr) {
+                    console.warn('Sharp processing skipped:', sharpErr.message);
+                    // proceed with original buffer
                 }
-            })
 
-            await file.makePublic()
-            imageUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+                const filename = `discount-posts/${userId}-${Date.now()}.jpg`;
+                const file = bucket.file(filename);  
+
+                await file.save(processedImage, {
+                    metadata: {
+                        contentType: req.file.mimetype || 'image/jpeg'
+                    }
+                })
+
+                await file.makePublic()
+                imageUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+                console.log('Image uploaded successfully:', imageUrl);
+            } catch (uploadErr) {
+                console.error('Image upload failed:', uploadErr);
+                // Continue without image (post will be created but no image)
+                imageUrl = '';
+            }
         }
         
         //create the data
@@ -98,6 +112,7 @@ const createDiscount = async(req, res) => {
         })
     }
     catch(error){
+        console.error('CreateDiscount error:', error);
         res.status(500).json({
             success: false,
             message: "Error Creating Discount Post",

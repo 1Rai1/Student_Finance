@@ -1,25 +1,31 @@
 const express = require('express');
 const router = express.Router()
 const goalController = require('./goal-Controller')
-const {strictLimiter, readLimiter} = require('./../Middleware/rateLimiter')
-const {verifyAdmin, verifyOwnership } = require('../Middleware/auth');
+const { strictLimiter, readLimiter } = require('./../Middleware/rateLimiter')
+const { verifyToken, verifyAdmin, verifyOwnership } = require('../Middleware/auth');
 
+//get all goals (admin only)
+router.get('/', verifyToken, verifyAdmin, readLimiter, goalController.getAllGoals)
 
-//get the all goals
-router.get('/',verifyAdmin,readLimiter, goalController.getAllGoals) 
-//get them user with all their  motivations details
-router.get('/user/:userId/details',verifyOwnership,readLimiter, goalController.getUserWithGoals)
-//get user with motivationg with minimal detail
-router.get('/user/:userId',verifyOwnership,readLimiter, goalController.getGoalsByUserId) 
-//get specific motivation ahahah
-router.get('/:goalId',verifyOwnership,readLimiter, goalController.getGoalById)
-//create a motivation little one
-router.post('/user/:userId',strictLimiter, goalController.createGoal)
-//update your motivation progress little one
-router.post('/:goalId/progress',verifyOwnership,strictLimiter, goalController.addProgress)
-//update your crypto lmmao
-router.put('/:goalId',verifyOwnership,strictLimiter, goalController.updateGoals)
-//why woud you delete it?
-router.delete('/:goalId',verifyOwnership,strictLimiter, goalController.deleteGoal)
+//get user with goals details
+router.get('/user/:userId/details', verifyToken, verifyOwnership, readLimiter, goalController.getUserWithGoals)
+
+//get user goals minimal
+router.get('/user/:userId', verifyToken, verifyOwnership, readLimiter, goalController.getGoalsByUserId)
+
+//get specific goal
+router.get('/:goalId', verifyToken, verifyOwnership, readLimiter, goalController.getGoalById)
+
+//create goal
+router.post('/user/:userId', verifyToken, strictLimiter, goalController.createGoal)
+
+//add progress (use only verifyToken – ownership check can be added later)
+router.post('/:goalId/progress', verifyToken, strictLimiter, goalController.addProgress)
+
+//update goal
+router.put('/:goalId', verifyToken, verifyOwnership, strictLimiter, goalController.updateGoals)
+
+//delete goal
+router.delete('/:goalId', verifyToken, verifyOwnership, strictLimiter, goalController.deleteGoal)
 
 module.exports = router

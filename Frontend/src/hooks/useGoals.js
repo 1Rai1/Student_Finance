@@ -3,24 +3,21 @@ import { Alert } from 'react-native';
 import { useAuth } from './useAuth';
 import API_BASE from '../config';
 
-//context
 const GoalsContext = createContext({});
 export const useGoals = () => useContext(GoalsContext);
 
-//sanitize ID
 const cleanGoalId = (id) => {
   if (!id) return '';
   return id.toString().trim();
 };
 
-//fetch helper
-const request = async (endpoint, options = {}) => {
+const request = async (endpoint, token, options = {}) => {
   try {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      headers: { 'Content-Type': 'application/json' },
-      ...options
-    });
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
     const data = await res.json();
+    if (res.status === 404) return { success: true, data: [] };
     return data;
   } catch (error) {
     console.error('Request error:', error);
@@ -28,174 +25,108 @@ const request = async (endpoint, options = {}) => {
   }
 };
 
-//endpoints
-const api = {
-  getUserGoals: (uid) => request(`/goal/user/${uid}`),
-  create: (uid, data) => request(`/goal/user/${uid}`, {
-    method: 'POST',
-    body: JSON.stringify(data)
-  }),
-  delete: (id) => {
-    const cleanId = cleanGoalId(id);
-    return request(`/goal/${cleanId}`, { method: 'DELETE' });
-  },
-  //amount in body
-  addProgress: (id, amount) => {
-    const cleanId = cleanGoalId(id);
-    return request(`/goal/${cleanId}/progress`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: parseFloat(amount) })
-    });
-  },
-};
-
 export const GoalsProvider = ({ children }) => {
   const { user } = useAuth();
-  //state
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  //fetch goals
   const fetchGoals = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.uid) return;
     setLoading(true);
-    try {
-      const res = await api.getUserGoals(user.id);
-      if (res?.success) {
-        setGoals(res.data || []);
-      } else {
-        setGoals([]);
-      }
-    } catch (error) {
-      console.error('Fetch goals error:', error);
+    const res = await request(`/goal/user/${user.uid}`, user?.idToken);
+    if (res?.success) {
+      setGoals(res.data || []);
+    } else {
       setGoals([]);
-    } finally {
-      setLoading(false);
     }
-  }, [user?.id]);
+    setLoading(false);
+  }, [user]);
 
-  //create goal
   const createGoal = useCallback(async (data) => {
-    if (!user?.id) {
+    if (!user?.uid) {
       Alert.alert('Error', 'Not authenticated');
       return false;
     }
     setLoading(true);
-    try {
-      //build payload
-      const payload = {
-        title: data.title,
-        description: data.description || '',
-        targetAmount: parseFloat(data.targetAmount),
-        currentAmount: 0,
-        deadline: data.deadline || null,
-        category: data.category || 'general'
-      };
-
-      const res = await api.create(user.id, payload);
-
-      if (res?.success) {
-        await fetchGoals();
-        Alert.alert('Success', 'Goal created');
-        return true;
-      } else {
-        Alert.alert('Error', res?.message || 'Failed to create goal');
-        return false;
-      }
-    } catch (error) {
-      console.error('Create goal error:', error);
-      Alert.alert('Error', 'Network error');
+    const payload = {
+      title: data.title,
+      description: data.description || '',
+      targetAmount: parseFloat(data.targetAmount),
+      currentAmount: 0,
+      deadline: data.deadline || null,
+      category: data.category || 'general'
+    };
+    const res = await request(`/goal/user/${user.uid}`, user?.idToken, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (res?.success) {
+      await fetchGoals();
+      Alert.alert('Success', 'Goal created');
+      return true;
+    } else {
+      Alert.alert('Error', res?.message || 'Failed to create goal');
       return false;
-    } finally {
-      setLoading(false);
     }
-  }, [user?.id, fetchGoals]);
+  }, [user, fetchGoals]);
 
-  //add progress
   const addProgress = useCallback(async (goalId, amount) => {
     const cleanId = cleanGoalId(goalId);
-
     if (!cleanId) {
       Alert.alert('Error', 'Invalid goal ID');
       return false;
     }
-
-    //validate amount
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
       return false;
     }
-
     setLoading(true);
-    try {
-      const res = await api.addProgress(cleanId, numAmount);
-
-      if (res?.success) {
-        await fetchGoals();
-        Alert.alert('✅ Success', 'Savings added!');
-        return true;
-      } else {
-        Alert.alert('Error', res?.message || 'Failed to add savings');
-        return false;
-      }
-    } catch (error) {
-      console.error('Add progress error:', error);
-      Alert.alert('Error', 'Network error');
+    const res = await request(`/goal/${cleanId}/progress`, user?.idToken, {
+      method: 'POST',
+      body: JSON.stringify({ amount: numAmount })
+    });
+    if (res?.success) {
+      await fetchGoals();
+      Alert.alert('✅ Success', 'Savings added!');
+      return true;
+    } else {
+      Alert.alert('Error', res?.message || 'Failed to add savings');
       return false;
-    } finally {
-      setLoading(false);
     }
-  }, [fetchGoals]);
+  }, [user, fetchGoals]);
 
-  //delete goal
   const deleteGoal = useCallback(async (goalId) => {
     const cleanId = cleanGoalId(goalId);
-
     if (!cleanId) {
       Alert.alert('Error', 'Goal not found');
       return false;
     }
-
     setLoading(true);
-    try {
-      const res = await api.delete(cleanId);
-      if (res?.success) {
-        setGoals(prev => prev.filter(g => g.id !== cleanId));
-        Alert.alert('Success', 'Goal deleted');
-        return true;
-      } else {
-        Alert.alert('Error', res?.message || 'Failed to delete');
-        return false;
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Network error');
+    const res = await request(`/goal/${cleanId}`, user?.idToken, { method: 'DELETE' });
+    if (res?.success) {
+      setGoals(prev => prev.filter(g => g.id !== cleanId));
+      Alert.alert('Success', 'Goal deleted');
+      return true;
+    } else {
+      Alert.alert('Error', res?.message || 'Failed to delete');
       return false;
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [user]);
 
-  //on user change
   useEffect(() => {
-    if (user?.id) fetchGoals();
-  }, [user?.id, fetchGoals]);
+    if (user?.uid) fetchGoals();
+  }, [user?.uid, fetchGoals]);
 
-  //context value
-  const value = {
-    goals,
-    loading,
-    fetchGoals,
-    createGoal,
-    addProgress,
-    deleteGoal,
-    api
-  };
-
-  //provide
   return (
-    <GoalsContext.Provider value={value}>
+    <GoalsContext.Provider value={{
+      goals,
+      loading,
+      fetchGoals,
+      createGoal,
+      addProgress,
+      deleteGoal
+    }}>
       {children}
     </GoalsContext.Provider>
   );
