@@ -12,10 +12,12 @@ export function DiscountsProvider({ children }) {
   const uid = user?.uid;
   const token = user?.idToken;
 
+  // Helper for authenticated requests
   const authFetch = async (url, options = {}) => {
     const headers = {
-      ...options.headers,
+      'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
+      ...options.headers,
     };
     const res = await fetch(url, { ...options, headers });
     return res.json();
@@ -34,28 +36,14 @@ export function DiscountsProvider({ children }) {
 
   useEffect(() => { fetchPosts(); }, []);
 
-  const createPost = async ({ title, description, location, imageUri }) => {
+  // Create post (without image)
+  const createPost = async ({ title, description, location }) => {
     if (!uid) return { success: false, message: 'Not logged in' };
     const form = new FormData();
     form.append('title', title);
     form.append('description', description);
     form.append('location', location);
-    
-    if (imageUri) {
-      const filename = imageUri.split('/').pop();
-      const ext = filename.split('.').pop().toLowerCase();
-      let mimeType = 'image/jpeg';
-      if (ext === 'png') mimeType = 'image/png';
-      if (ext === 'webp') mimeType = 'image/webp';
-      
-      form.append('image', {
-        uri: imageUri,
-        name: filename,
-        type: mimeType,
-      });
-    }
-    
-    // Important: Do NOT set 'Content-Type' header for FormData
+    // No image for now
     const res = await fetch(`${BASE}/user/${uid}`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },

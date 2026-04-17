@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Text, View, Pressable, FlatList, TextInput, Modal, Alert, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { COLORS, SPACING, TYPOGRAPHY, LAYOUT, BUTTON, MODAL, CARD, TEXT, INPUT_STYLES, UTILS, PROGRESS, CHIP } from '../styles/global';
+import { COLORS, SPACING, TYPOGRAPHY, LAYOUT, BUTTON, MODAL, CARD, TEXT, INPUT_STYLES, UTILS, PROGRESS, CHIP, Confetti, showConfetti } from '../styles/global';
 import { useGoals } from '../hooks/useGoals';
 
 const CATEGORIES = ['General', 'Education', 'Travel', 'Shopping', 'Emergency', 'Other'];
@@ -19,6 +19,9 @@ export default function GoalsScreen() {
   const [addAmount, setAddAmount] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
+
+  // ref for confetti
+  const confettiRef = useRef(null);
 
   const handleCreate = async () => {
     if (!title || !target) {
@@ -68,6 +71,8 @@ export default function GoalsScreen() {
     }
     const success = await addProgress(selectedGoal.id, amount);
     if (success) {
+      // Trigger confetti celebration
+      showConfetti(confettiRef);
       setAddAmount('');
       setSelectedGoal(null);
       setShowAddModal(false);
@@ -108,7 +113,7 @@ export default function GoalsScreen() {
           </View>
           <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
             {!isCompleted && (
-              <Pressable onPress={() => openAddModal(item)} style={{ backgroundColor: COLORS.green, padding: 8, borderRadius: 8 }}>
+              <Pressable onPress={() => openAddModal(item)} style={{ backgroundColor: COLORS.green, padding: 8, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={{ color: COLORS.white, fontWeight: 'bold' }}>Add Savings</Text>
               </Pressable>
             )}
@@ -143,6 +148,9 @@ export default function GoalsScreen() {
 
   return (
     <View style={UTILS.flex1}>
+      {/* confetti cannon */}
+      <Confetti ref={confettiRef} />
+
       <View style={LAYOUT.goalsHeader}>
         <Text style={TYPOGRAPHY.h1}>My Goals</Text>
         <Text style={TYPOGRAPHY.caption}>
@@ -170,6 +178,7 @@ export default function GoalsScreen() {
         }
       />
 
+      {/* create goal modal */}
       <Modal visible={showModal} transparent animationType="slide">
         <View style={MODAL.overlay}>
           <ScrollView contentContainerStyle={MODAL.goalsModal} showsVerticalScrollIndicator={false}>
@@ -213,6 +222,7 @@ export default function GoalsScreen() {
         </View>
       </Modal>
 
+      {/* add savings modal */}
       <Modal visible={showAddModal} transparent animationType="slide">
         <View style={MODAL.overlay}>
           <View style={MODAL.goalsModal}>

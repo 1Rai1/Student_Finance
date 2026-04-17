@@ -2,17 +2,22 @@ import { createContext, useContext, useState } from 'react';
 import { useAuth } from './useAuth';
 import API_BASE from '../config';
 
-//context
 const AdminContext = createContext({});
 export const useAdmin = () => useContext(AdminContext);
 
-//fetch helper
-const request = async (endpoint, options = {}) => {
+const getAuthHeader = (user) => {
+  if (user?.idToken) return { 'Authorization': `Bearer ${user.idToken}` };
+  return {};
+};
+
+const request = async (endpoint, user, options = {}) => {
   try {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      headers: { 'Content-Type': 'application/json' },
-      ...options,
-    });
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getAuthHeader(user),
+      ...options.headers,
+    };
+    const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
     return await res.json();
   } catch {
     return { success: false };
@@ -21,27 +26,22 @@ const request = async (endpoint, options = {}) => {
 
 export function AdminProvider({ children }) {
   const { user } = useAuth();
-  //admin check
   const isAdmin = user?.role === 'admin';
 
-  //lessons state
   const [lessons, setLessons] = useState([]);
-  //quizzes state
-  const [quizzes, setQuizzes] = useState([]);
+  const [quizzes, setQuizzes] = useState([]); // this is fine, we define it here
   const [loading, setLoading] = useState(false);
 
-  //fetch lessons
   const fetchLessons = async () => {
     setLoading(true);
-    const res = await request('/lesson');
+    const res = await request('/lesson', user);
     if (res?.success) setLessons(res.data || []);
     setLoading(false);
   };
 
-  //create lesson
   const createLesson = async (data) => {
     if (!isAdmin) return { success: false, message: 'Unauthorized' };
-    const res = await request('/lesson', {
+    const res = await request('/lesson', user, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -49,10 +49,9 @@ export function AdminProvider({ children }) {
     return res;
   };
 
-  //update lesson
   const updateLesson = async (id, data) => {
     if (!isAdmin) return { success: false, message: 'Unauthorized' };
-    const res = await request(`/lesson/${id}`, {
+    const res = await request(`/lesson/${id}`, user, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -60,26 +59,27 @@ export function AdminProvider({ children }) {
     return res;
   };
 
-  //delete lesson
   const deleteLesson = async (id) => {
     if (!isAdmin) return { success: false, message: 'Unauthorized' };
-    const res = await request(`/lesson/${id}`, { method: 'DELETE' });
-    if (res?.success) setLessons(prev => prev.filter(l => l.id !== id));
+    const res = await request(`/lesson/${id}`, user, { method: 'DELETE' });
+    if (res?.success) {
+      setLessons(prev => prev.filter(l => l.id !== id));
+      setQuizzes([]);
+    }
     return res;
   };
 
-  //fetch quizzes
   const fetchQuizzes = async (lessonId) => {
     setLoading(true);
-    const res = await request(`/lesson/${lessonId}/quiz`);
+    const res = await request(`/lesson/${lessonId}/quiz`, user);
     if (res?.success) setQuizzes(res.data || []);
+    else setQuizzes([]);
     setLoading(false);
   };
 
-  //create quiz
   const createQuiz = async (lessonId, data) => {
     if (!isAdmin) return { success: false, message: 'Unauthorized' };
-    const res = await request(`/lesson/${lessonId}/quiz`, {
+    const res = await request(`/lesson/${lessonId}/quiz`, user, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -87,22 +87,21 @@ export function AdminProvider({ children }) {
     return res;
   };
 
-  //delete quiz
   const deleteQuiz = async (lessonId, quizId) => {
     if (!isAdmin) return { success: false, message: 'Unauthorized' };
-    const res = await request(`/lesson/${lessonId}/quiz/${quizId}`, { method: 'DELETE' });
-    if (res?.success) setQuizzes(prev => prev.filter(q => q.id !== quizId));
+    const res = await request(`/lesson/${lessonId}/quiz/${quizId}`, user, { method: 'DELETE' });
+    if (res?.success) {
+      setQuizzes(prev => prev.filter(q => q.id !== quizId));
+    }
     return res;
   };
 
-  //admin delete any discount post
   const adminDeletePost = async (postId) => {
     if (!isAdmin) return { success: false, message: 'Unauthorized' };
-    const res = await request(`/discount/${postId}`, { method: 'DELETE' });
+    const res = await request(`/discount/${postId}`, user, { method: 'DELETE' });
     return res;
   };
 
-  //provide
   return (
     <AdminContext.Provider value={{
       isAdmin,
