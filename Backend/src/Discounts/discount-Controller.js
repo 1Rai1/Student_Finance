@@ -1,6 +1,6 @@
-const {db, bucket} = require('../../firebase/firebase-admin')
+const {db} = require('../../firebase/firebase-admin')
+const cloudinary = require('../Middleware/cloudinary')
 const sharp = require('sharp')
-
 const discountCollection = db.collection('discounts');
 const userCollection = db.collection('users');
 const interactionsCollection = db.collection('post-interactions');

@@ -1,5 +1,7 @@
 // controllers/userController.js
 const { db } = require('./../../firebase/firebase-admin');
+const cloudinary = require('../Middleware/cloudinary'); // Your new config file
+const sharp = require('sharp');
 
 const userCollection = db.collection('users');
 
@@ -76,39 +78,53 @@ const updateUser = async (req, res) => {
         const { name, age, monthlyBudget } = req.body;
         
         const userDoc = await userCollection.doc(id).get();
-        
         if (!userDoc.exists) {
-            return res.status(404).json({
-                success: false,
-                message: "User Not Found"
+            return res.status(404).json({ success: false, message: "User Not Found" });
+        }
+
+        let profilePicUrl = userDoc.data().profilePic || '';
+
+        // Check if a new image was uploaded
+        if (req.file) {
+            // 1. Process image with Sharp (Profile pics are usually square)
+            const processedImage = await sharp(req.file.buffer)
+                .resize(500, 500, { fit: 'cover' }) // 'cover' crops to a square
+                .jpeg({ quality: 80 })
+                .toBuffer();
+
+            // 2. Upload to Cloudinary
+            const uploadResult = await new Promise((resolve, reject) => {
+                cloudinary.uploader.upload_stream({
+                    folder: 'profile-pics',
+                    public_id: `user-${id}`, // Overwrites the old pic for this user
+                    resource_type: 'image'
+                }, (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }).end(processedImage);
             });
+
+            profilePicUrl = uploadResult.secure_url;
         }
 
         const updateData = {
             ...(name && { name }),
             ...(age !== undefined && { age }),
             ...(monthlyBudget !== undefined && { monthlyBudget: parseFloat(monthlyBudget) }),
+            profilePic: profilePicUrl, // Add this field
             updatedAt: new Date().toISOString()
         };
 
         await userCollection.doc(id).update(updateData);
 
-        const updatedDoc = await userCollection.doc(id).get();
-
         res.status(200).json({
             success: true,
             message: "User Updated Successfully",
-            data: {
-                id: updatedDoc.id,
-                ...updatedDoc.data()
-            }
+            data: { id, ...updateData }
         });
+
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error Updating User",
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: "Error Updating User", error: error.message });
     }
 };
 
