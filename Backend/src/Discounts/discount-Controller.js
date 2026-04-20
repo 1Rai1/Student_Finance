@@ -95,6 +95,7 @@ const createDiscount = async(req, res) => {
         })
     }
     catch(error){
+        console.error('CreateDiscount error:', error);
         res.status(500).json({
             success: false,
             message: "Error Creating Discount Post",

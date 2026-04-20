@@ -5,25 +5,18 @@ const discountController = require('./discount-Controller')
 const { verifyToken, verifyAdmin, verifyOwnership } = require('../Middleware/auth');
 const { strictLimiter, readLimiter } = require('../Middleware/rateLimiter');
 
-// Get all posts 
-router.get('/',readLimiter, discountController.getAllDiscount);
-// Get single post
-router.get('/:postId',readLimiter, discountController.getDiscountById);
-// Get messages for a post
-router.get('/:postId/messages',readLimiter, discountController.getPostMessages);
-// Create post (title, description, location, optional image)
-router.post('/user/:userId',strictLimiter, upload.single('image'), discountController.createDiscount);
-//Search for a post
-router.get('/search', readLimiter,discountController.filterPost); 
-// Like a post
-router.post('/:postId/like',strictLimiter, discountController.likePost);
-// Save a post
-router.post('/:postId/save',strictLimiter, discountController.savePost);
-// Vote on post (real or fake)
-router.post('/:postId/vote',strictLimiter, discountController.voteOnPost);
-// Add comment
-router.post('/:postId/message',strictLimiter,discountController.addMessage);
-// Delete post
-router.delete('/:postId',verifyOwnership,strictLimiter, discountController.deleteDiscount);
+// Public routes (read only)
+router.get('/', readLimiter, discountController.getAllDiscount);
+router.get('/search', readLimiter, discountController.filterPost);
+router.get('/:postId', readLimiter, discountController.getDiscountById);
+router.get('/:postId/messages', readLimiter, discountController.getPostMessages);
+
+// Protected routes (require authentication)
+router.post('/user/:userId', verifyToken, strictLimiter, upload.single('image'), discountController.createDiscount);
+router.post('/:postId/like', verifyToken, strictLimiter, discountController.likePost);
+router.post('/:postId/save', verifyToken, strictLimiter, discountController.savePost);
+router.post('/:postId/vote', verifyToken, strictLimiter, discountController.voteOnPost);
+router.post('/:postId/message', verifyToken, strictLimiter, discountController.addMessage);
+router.delete('/:postId', verifyToken, strictLimiter, discountController.deleteDiscount); // ownership check optional
 
 module.exports = router;

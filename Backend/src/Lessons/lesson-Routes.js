@@ -2,25 +2,20 @@ const express = require('express')
 const router = express.Router()
 const lessonController = require('./lesson-Controller')
 const {strictLimiter, readLimiter} = require('./../Middleware/rateLimiter')
-const {verifyAdmin } = require('../Middleware/auth');
+const { verifyToken, verifyAdmin } = require('../Middleware/auth');
 
-//get All Lessons
-router.get('/',readLimiter, lessonController.getAllLessons)
-//get Specific lesson
-router.get('/:id',readLimiter, lessonController.getLessonById)
-//create lesson
-router.post('/',strictLimiter,verifyAdmin, lessonController.createLesson)
-//update lesson
-router.put('/:id',strictLimiter,verifyAdmin, lessonController.updateLesson)
-//delete lesson
-router.delete('/:id',strictLimiter,verifyAdmin, lessonController.deleteLesson)
+// Public routes (no auth required for reading)
+router.get('/', readLimiter, lessonController.getAllLessons)
+router.get('/:id', readLimiter, lessonController.getLessonById)
 
-//quiz routes for lessons
-//get quizzes for a lesson
-router.get('/:lessonId/quiz',readLimiter, lessonController.getQuizzesByLessonId)
-//create quiz for a lesson
-router.post('/:lessonId/quiz',strictLimiter,verifyAdmin, lessonController.createQuiz)
-//delete quiz
-router.delete('/:lessonId/quiz/:quizId',strictLimiter,verifyAdmin, lessonController.deleteQuiz)
+// Admin-only routes (require authentication AND admin role)
+router.post('/', strictLimiter, verifyToken, verifyAdmin, lessonController.createLesson)
+router.put('/:id', strictLimiter, verifyToken, verifyAdmin, lessonController.updateLesson)
+router.delete('/:id', strictLimiter, verifyToken, verifyAdmin, lessonController.deleteLesson)
+
+// Quiz routes
+router.get('/:lessonId/quiz', readLimiter, lessonController.getQuizzesByLessonId)
+router.post('/:lessonId/quiz', strictLimiter, verifyToken, verifyAdmin, lessonController.createQuiz)
+router.delete('/:lessonId/quiz/:quizId', strictLimiter, verifyToken, verifyAdmin, lessonController.deleteQuiz)
 
 module.exports = router
