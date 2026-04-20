@@ -36,42 +36,25 @@ const createDiscount = async(req, res) => {
         let imageUrl = ''
 
         //files
-        if(req.file){
-            try {
-                let processedImage = req.file.buffer;
-                // Try to use sharp if available, otherwise skip processing
-                try {
-                    const sharp = require('sharp');
-                    processedImage = await sharp(req.file.buffer)
-                        .resize(1200, 1200, {
-                            fit: 'inside',
-                            withoutEnlargement: true
-                        })
-                        .jpeg({quality: 90})
-                        .toBuffer();
-                } catch (sharpErr) {
-                    console.warn('Sharp processing skipped:', sharpErr.message);
-                    // proceed with original buffer
-                }
+       if (req.file) {
+    const processedImage = await sharp(req.file.buffer)
+        .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 90 })
+        .toBuffer();
 
-                const filename = `discount-posts/${userId}-${Date.now()}.jpg`;
-                const file = bucket.file(filename);  
+    // THIS REPLACES FIREBASE STORAGE
+    const uploadResult = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream({
+            folder: 'discount-posts',
+            resource_type: 'image'
+        }, (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+        }).end(processedImage); // Send the Sharp buffer here
+    });
 
-                await file.save(processedImage, {
-                    metadata: {
-                        contentType: req.file.mimetype || 'image/jpeg'
-                    }
-                })
-
-                await file.makePublic()
-                imageUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
-                console.log('Image uploaded successfully:', imageUrl);
-            } catch (uploadErr) {
-                console.error('Image upload failed:', uploadErr);
-                // Continue without image (post will be created but no image)
-                imageUrl = '';
-            }
-        }
+    imageUrl = uploadResult.secure_url; // This is the new URL for Firestore
+}
         
         //create the data
         const postData = {
