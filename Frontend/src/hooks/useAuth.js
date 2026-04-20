@@ -5,9 +5,8 @@ import API_BASE, { FIREBASE_CONFIG } from '../config';
 const AuthContext = createContext({});
 export const useAuth = () => useContext(AuthContext);
 
-const { apiKey } = FIREBASE_CONFIG;
-
 const exchangeCustomToken = async (customToken) => {
+  const { apiKey } = FIREBASE_CONFIG;
   const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

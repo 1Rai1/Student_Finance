@@ -60,7 +60,7 @@ Student_Finance/
 │   │   ├── Lessons/        # Admin lesson management
 │   │   └── Middleware/     # Auth, rate limiting, upload
 │   ├── firebase/           # Firebase configuration
-│   ├── backend.test.js     # Jest test suite (21 tests)
+│   ├── backend.test.js     # Jest test suite
 │   └── server.js           # Main server file
 ├── Frontend/
 │   ├── src/
@@ -99,7 +99,7 @@ Student_Finance/
 
 2. **Start the app:**
    ```bash
-   npm expo start
+   npm start
    ```
 
 ### Running Tests
@@ -110,16 +110,6 @@ cd Backend
 npm install
 npm test
 ```
-
-The test suite includes 21 tests covering:
-- Authentication middleware (token validation, registration)
-- Authorization (admin vs user access)
-- Rate limiters (headers, limits)
-- File upload middleware (configuration, size limits)
-- API endpoints (health check, discount routes)
-- Middleware configuration (exports, functions)
-
-**Note:** Tests use mocked Firebase Admin to run without real Firebase credentials, but test the actual backend code (middleware, routes, controllers).
 
 ## API Endpoints
 
@@ -157,4 +147,7 @@ The test suite includes 21 tests covering:
 - Firebase Authentication integration
 - Input validation and sanitization
 - Proper error handling without exposing sensitive data
-- CORS configuration for mobile app compatibility
+- CORS configuration for full local network mobile compatibility
+- Rate limiting on all endpoints
+- JWT token verification middleware
+- File upload type and size restrictions

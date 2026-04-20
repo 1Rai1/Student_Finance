@@ -333,6 +333,7 @@ describe('Student Finance Backend API Tests', () => {
 
       const response = await request(app)
         .post('/api/discount/user/test-uid')
+        .set('Authorization', 'Bearer valid-test-token')
         .field('title', 'Test Discount with Image')
         .field('description', 'This discount has an attached image')
         .field('location', 'Test Location')
@@ -354,6 +355,7 @@ describe('Student Finance Backend API Tests', () => {
 
       const response = await request(app)
         .post('/api/discount/user/test-uid')
+        .set('Authorization', 'Bearer valid-test-token')
         .send({
           title: 'Test Discount No Image',
           description: 'This discount has no image',
@@ -379,6 +381,7 @@ describe('Student Finance Backend API Tests', () => {
     test('POST /api/discount/user/:userId requires title, description, location', async () => {
       const response = await request(app)
         .post('/api/discount/user/test-user-id')
+        .set('Authorization', 'Bearer valid-test-token')
         .send({ title: 'Test' }); // Missing description and location
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -392,6 +395,7 @@ describe('Student Finance Backend API Tests', () => {
 
       const response = await request(app)
         .post('/api/discount/user/non-existent-user')
+        .set('Authorization', 'Bearer valid-test-token')
         .send({
           title: 'Test Discount',
           description: 'Test Description',
