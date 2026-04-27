@@ -48,8 +48,8 @@ export default function RegisterScreen() {
     });
 
     if (result.success) {
-      Alert.alert('Success', 'Account created! Please log in.', [
-        { text: 'OK', onPress: () => navigation.replace('Login') }
+      Alert.alert('Success', 'Account created successfully!', [
+        { text: 'OK', onPress: () => navigation.replace('Dashboard') }
       ]);
     } else {
       Alert.alert('Registration Failed', result.message);

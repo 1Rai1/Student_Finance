@@ -71,6 +71,7 @@ export const AuthProvider = ({ children }) => {
       };
       await AsyncStorage.setItem('user', JSON.stringify(userInfo));
       await AsyncStorage.setItem('idToken', idToken);
+      setUser(userInfo);
       return { success: true };
     } catch (err) {
       return { success: false, message: err.message };
