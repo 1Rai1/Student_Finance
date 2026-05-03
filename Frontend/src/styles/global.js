@@ -12,6 +12,7 @@ export const COLORS = {
   red: '#EF4444',
   amber: '#F59E0B',
   blue: '#3B82F6',
+  primary: '#13294B'
 };
 
 //spacing

@@ -1,6 +1,11 @@
 import { renderHook } from '@testing-library/react-native';
 import React from 'react';
 import { useAuth, AuthProvider } from '../hooks/useAuth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
 
 jest.mock('../config', () => 'http://192.168.100.63:5000/api');
 

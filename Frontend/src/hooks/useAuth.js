@@ -39,12 +39,33 @@ export const AuthProvider = ({ children }) => {
   const [initializing, setInitializing] = useState(true);
 
   //restore session
-  useEffect(() => {
-    AsyncStorage.getItem('user').then(data => {
-      if (data) setUser(JSON.parse(data));
-      setInitializing(false);
-    }).catch(console.error);
-  }, []);
+useEffect(() => {
+  let isMounted = true;
+
+  const loadUser = async () => {
+    try {
+      const data = await AsyncStorage.getItem('user');
+
+      if (!isMounted) return;
+
+      if (data) {
+        setUser(JSON.parse(data));
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (isMounted) {
+        setInitializing(false);
+      }
+    }
+  };
+
+  loadUser();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   //login
   const login = async (email, password) => {
