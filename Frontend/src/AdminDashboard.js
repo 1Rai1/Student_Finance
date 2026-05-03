@@ -1,16 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+//screens/AdminDashboard.js
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, Pressable, Modal, TextInput,
   Alert, ActivityIndicator, FlatList
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useAdmin } from './hooks/useAdmin';
 import { useDiscounts } from './hooks/useDiscounts';
 import { useAuth } from './hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
-import { COLORS, SPACING, TYPOGRAPHY, BUTTON, INPUT, MODAL, CARD, TEXT, UTILS, CHIP, Confetti, showConfetti } from './styles/global';
+import { COLORS, SPACING, TYPOGRAPHY, BUTTON, INPUT, MODAL, CARD, TEXT, UTILS, CHIP } from './styles/global';
 
+//tab labels
 const TABS = ['Discounts', 'Lessons', 'Quizzes'];
+
+//category options for lessons
 const LESSON_CATS = ['Beginner', 'Stocks', 'Funds', 'Crypto', 'Savings', 'Real Estate', 'Budgeting'];
 
 const CATEGORY_COLORS = {
@@ -24,20 +27,25 @@ export default function AdminDashboard() {
   const { isAdmin, lessons, quizzes, loading, fetchLessons, createLesson, updateLesson, deleteLesson, fetchQuizzes, createQuiz, deleteQuiz } = useAdmin();
   const { posts, fetchPosts, deletePost } = useDiscounts();
 
-  const confettiRef = useRef(null);
+
+  //active tab
   const [tab, setTab] = useState('Discounts');
+  //selected lesson for quiz tab
   const [selectedLesson, setSelectedLesson] = useState(null);
+
+  //lesson modal state
   const [lessonModal, setLessonModal] = useState(false);
   const [editLesson, setEditLesson] = useState(null);
   const [lessonForm, setLessonForm] = useState({ title: '', description: '', url: '', duration: '', category: 'Beginner' });
+
+  //quiz modal state
   const [quizModal, setQuizModal] = useState(false);
   const [quizForm, setQuizForm] = useState({ question: '', options: ['', '', '', ''], answer: 0 });
 
   useEffect(() => { fetchPosts(); fetchLessons(); }, []);
-  useEffect(() => {
-    if (selectedLesson) fetchQuizzes(selectedLesson.id);
-  }, [selectedLesson]);
+  useEffect(() => { if (selectedLesson) fetchQuizzes(selectedLesson.id); }, [selectedLesson]);
 
+  //open lesson form
   const openLessonModal = (lesson = null) => {
     if (lesson) {
       setEditLesson(lesson);
@@ -49,74 +57,69 @@ export default function AdminDashboard() {
     setLessonModal(true);
   };
 
+  //save lesson
   const saveLesson = async () => {
     const { title, url, duration, category } = lessonForm;
     if (!title || !url || !duration) return Alert.alert('Error', 'Fill all required fields');
-    const res = editLesson ? await updateLesson(editLesson.id, lessonForm) : await createLesson(lessonForm);
+    const res = editLesson
+      ? await updateLesson(editLesson.id, lessonForm)
+      : await createLesson(lessonForm);
     if (res?.success) {
       setLessonModal(false);
-      if (!editLesson) showConfetti(confettiRef);
     } else {
       Alert.alert('Error', res?.message || 'Failed');
     }
   };
 
+  //delete lesson confirm
   const confirmDeleteLesson = (id) => {
     Alert.alert('Delete Lesson', 'This will also remove its quizzes.', [
       { text: 'Cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-          const res = await deleteLesson(id);
-          if (res?.success) showConfetti(confettiRef);
-        }
-      },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteLesson(id) },
     ]);
   };
 
-  const confirmDeletePost = (postId) => {
-    Alert.alert('Delete Post', 'Remove this post as admin?', [
-      { text: 'Cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-          const res = await deletePost(postId);
-          if (res?.success) showConfetti(confettiRef);
-        }
-      },
-    ]);
-  };
-
+  //save quiz
   const saveQuiz = async () => {
     if (!selectedLesson) return;
     const { question, options, answer } = quizForm;
     if (!question || options.some(o => !o)) return Alert.alert('Error', 'Fill all fields');
     const res = await createQuiz(selectedLesson.id, { question, options, correctIndex: answer });
     if (res?.success) {
+      setQuizModal(false);
       setQuizForm({ question: '', options: ['', '', '', ''], answer: 0 });
-      Alert.alert('Success', 'Question added! You can add another.');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
       Alert.alert('Error', res?.message || 'Failed');
     }
   };
 
-  const closeQuizModal = () => {
-    setQuizModal(false);
-    setQuizForm({ question: '', options: ['', '', '', ''], answer: 0 });
+  //confirm delete discount post (admin)
+  const confirmDeletePost = (postId) => {
+    Alert.alert('Delete Post', 'Remove this post as admin?', [
+      { text: 'Cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        const res = await deletePost(postId);
+        if (!res?.success) Alert.alert('Error', 'Failed to delete');
+      }},
+    ]);
   };
 
   if (!isAdmin) return null;
 
   return (
     <View style={[UTILS.flex1, { backgroundColor: COLORS.white }]}>
-      <Confetti ref={confettiRef} />
+      {/*header*/}
       <View style={{ paddingHorizontal: SPACING.lg, paddingTop: 60, paddingBottom: SPACING.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View>
           <Text style={TYPOGRAPHY.caption}>Admin Panel</Text>
           <Text style={TYPOGRAPHY.h1}>Dashboard</Text>
         </View>
-        <Pressable onPress={async () => { await logout(); }}>
+        <Pressable onPress={async () => { await logout(); navigation.replace('Login'); }}>
           <Text style={[TYPOGRAPHY.body, { color: COLORS.red }]}>Logout</Text>
         </Pressable>
       </View>
 
+      {/*tabs*/}
       <View style={{ flexDirection: 'row', paddingHorizontal: SPACING.lg, gap: SPACING.sm, marginBottom: SPACING.md }}>
         {TABS.map(t => (
           <Pressable key={t} style={[CHIP.base, tab === t && CHIP.active, { flex: 1, alignItems: 'center' }]} onPress={() => setTab(t)}>
@@ -127,6 +130,7 @@ export default function AdminDashboard() {
 
       {loading && <ActivityIndicator color={COLORS.navy} style={{ marginTop: SPACING.lg }} />}
 
+      {/*discounts tab*/}
       {tab === 'Discounts' && (
         <FlatList
           data={posts}
@@ -147,6 +151,7 @@ export default function AdminDashboard() {
         />
       )}
 
+      {/*lessons tab*/}
       {tab === 'Lessons' && (
         <View style={UTILS.flex1}>
           <View style={{ paddingHorizontal: SPACING.lg, marginBottom: SPACING.md }}>
@@ -187,9 +192,11 @@ export default function AdminDashboard() {
         </View>
       )}
 
+      {/*quizzes tab*/}
       {tab === 'Quizzes' && (
         <View style={UTILS.flex1}>
           <View style={{ paddingHorizontal: SPACING.lg, marginBottom: SPACING.md, gap: SPACING.sm }}>
+            {/*lesson picker*/}
             <Text style={TYPOGRAPHY.bodySmall}>Select Lesson:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.sm }}>
               {lessons.map(l => (
@@ -240,18 +247,22 @@ export default function AdminDashboard() {
         </View>
       )}
 
-      {/* Lesson Modal */}
+      {/*lesson modal*/}
       <Modal visible={lessonModal} transparent animationType="slide">
         <View style={MODAL.overlay}>
           <ScrollView keyboardShouldPersistTaps="handled" style={MODAL.content}>
             <View style={MODAL.handle} />
             <Text style={[TYPOGRAPHY.h2, { marginBottom: SPACING.lg }]}>{editLesson ? 'Edit Lesson' : 'New Lesson'}</Text>
+
             {[['Title *', 'title'], ['YouTube URL *', 'url'], ['Duration (e.g. 12:30) *', 'duration'], ['Description', 'description']].map(([label, key]) => (
               <View key={key} style={[INPUT.group, { marginBottom: SPACING.sm }]}>
                 <Text style={TYPOGRAPHY.bodySmall}>{label}</Text>
-                <View style={INPUT.wrap}><TextInput style={INPUT.field} value={lessonForm[key]} onChangeText={v => setLessonForm(p => ({ ...p, [key]: v }))} /></View>
+                <View style={INPUT.wrap}>
+                  <TextInput style={INPUT.field} value={lessonForm[key]} onChangeText={v => setLessonForm(p => ({ ...p, [key]: v }))} />
+                </View>
               </View>
             ))}
+
             <Text style={[TYPOGRAPHY.bodySmall, { marginBottom: SPACING.sm }]}>Category</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs, marginBottom: SPACING.lg }}>
               {LESSON_CATS.map(c => (
@@ -260,22 +271,32 @@ export default function AdminDashboard() {
                 </Pressable>
               ))}
             </View>
-            <Pressable style={BUTTON.primary} onPress={saveLesson}><Text style={BUTTON.text}>{editLesson ? 'Save Changes' : 'Create Lesson'}</Text></Pressable>
-            <Pressable style={{ marginTop: SPACING.md }} onPress={() => setLessonModal(false)}><Text style={[TYPOGRAPHY.body, UTILS.textCenter]}>Cancel</Text></Pressable>
+
+            <Pressable style={BUTTON.primary} onPress={saveLesson}>
+              <Text style={BUTTON.text}>{editLesson ? 'Save Changes' : 'Create Lesson'}</Text>
+            </Pressable>
+            <Pressable style={{ marginTop: SPACING.md }} onPress={() => setLessonModal(false)}>
+              <Text style={[TYPOGRAPHY.body, UTILS.textCenter]}>Cancel</Text>
+            </Pressable>
           </ScrollView>
         </View>
       </Modal>
 
-      {/* Quiz Modal (stay open) */}
+      {/*quiz modal*/}
       <Modal visible={quizModal} transparent animationType="slide">
         <View style={MODAL.overlay}>
           <ScrollView keyboardShouldPersistTaps="handled" style={MODAL.content}>
             <View style={MODAL.handle} />
             <Text style={[TYPOGRAPHY.h2, { marginBottom: SPACING.lg }]}>New Quiz Question</Text>
+
             <View style={[INPUT.group, { marginBottom: SPACING.md }]}>
               <Text style={TYPOGRAPHY.bodySmall}>Question</Text>
-              <View style={INPUT.wrap}><TextInput style={INPUT.field} value={quizForm.question} onChangeText={v => setQuizForm(p => ({ ...p, question: v }))} multiline /></View>
+              <View style={INPUT.wrap}>
+                <TextInput style={INPUT.field} value={quizForm.question} onChangeText={v => setQuizForm(p => ({ ...p, question: v }))} multiline />
+              </View>
             </View>
+
+            {/*options*/}
             <Text style={[TYPOGRAPHY.bodySmall, { marginBottom: SPACING.sm }]}>Options (tap to mark correct)</Text>
             {quizForm.options.map((opt, i) => (
               <View key={i} style={[INPUT.group, { marginBottom: SPACING.sm }]}>
@@ -285,12 +306,18 @@ export default function AdminDashboard() {
                   </Text>
                 </Pressable>
                 <View style={[INPUT.wrap, quizForm.answer === i && { borderColor: COLORS.green }]}>
-                  <TextInput style={INPUT.field} value={opt} onChangeText={v => setQuizForm(p => { const opts = [...p.options]; opts[i] = v; return { ...p, options: opts }; })} />
+                  <TextInput style={INPUT.field} value={opt}
+                    onChangeText={v => setQuizForm(p => { const opts = [...p.options]; opts[i] = v; return { ...p, options: opts }; })} />
                 </View>
               </View>
             ))}
-            <Pressable style={[BUTTON.primary, { marginTop: SPACING.md }]} onPress={saveQuiz}><Text style={BUTTON.text}>Add Question</Text></Pressable>
-            <Pressable style={{ marginTop: SPACING.md }} onPress={closeQuizModal}><Text style={[TYPOGRAPHY.body, UTILS.textCenter]}>Close</Text></Pressable>
+
+            <Pressable style={[BUTTON.primary, { marginTop: SPACING.md }]} onPress={saveQuiz}>
+              <Text style={BUTTON.text}>Add Question</Text>
+            </Pressable>
+            <Pressable style={{ marginTop: SPACING.md }} onPress={() => setQuizModal(false)}>
+              <Text style={[TYPOGRAPHY.body, UTILS.textCenter]}>Cancel</Text>
+            </Pressable>
           </ScrollView>
         </View>
       </Modal>

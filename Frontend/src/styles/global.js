@@ -1,26 +1,3 @@
-import React from 'react'
-import ConfettiCannon from 'react-native-confetti-cannon';
-
-export const showConfetti = (ref) => {
-  if (ref && ref.current) {
-    ref.current.start();
-  }
-};
-
-export const Confetti = React.forwardRef((props, ref) => (
-  <ConfettiCannon
-    ref={ref}
-    count={200}
-    origin={{ x: -10, y: 0 }}
-    explosionSpeed={350}
-    fallSpeed={2500}
-    colors={['#13294B', '#4CD964', '#F59E0B', '#EF4444', '#3B82F6']}
-    autoStart={false}
-    fadeOut={true}
-    {...props}
-  />
-));
-
 //colors
 export const COLORS = {
   navy: '#13294B',
@@ -35,6 +12,7 @@ export const COLORS = {
   red: '#EF4444',
   amber: '#F59E0B',
   blue: '#3B82F6',
+  primary: '#13294B'
 };
 
 //spacing
@@ -121,7 +99,6 @@ export const INPUT = {
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E9ECEF',
-    position: 'relative'
   },
   field: {
     flex: 1,

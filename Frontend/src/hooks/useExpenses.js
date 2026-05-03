@@ -3,61 +3,59 @@ import { Alert } from 'react-native';
 import { useAuth } from './useAuth';
 import API_BASE from '../config';
 
+//context
 const ExpensesContext = createContext({});
 export const useExpenses = () => useContext(ExpensesContext);
 
-const request = async (endpoint, token, options = {}) => {
+//fetch helper
+const request = async (endpoint, options = {}) => {
   try {
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options
+    });
     const data = await res.json();
-    console.log(`[request] ${endpoint} response:`, data);
-    if (res.status === 404) return { success: true, data: [] };
-    return data;
-  } catch (err) {
-    console.error(`[request] error for ${endpoint}:`, err);
+    return res.status === 404 ? { success: true, data: [] } : data;
+  } catch {
     return { success: false, data: [] };
   }
 };
 
+//endpoints
+const api = {
+  get: (uid) => request(`/expense/user/${uid}`),
+  add: (uid, d) => request(`/expense/user/${uid}`, {
+    method: 'POST',
+    body: JSON.stringify(d)
+  }),
+  del: (id) => request(`/expense/${id}`, { method: 'DELETE' })
+};
+
 export const ExpensesProvider = ({ children }) => {
   const { user } = useAuth();
+  //state
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [budget, setBudget] = useState(user?.monthlyBudget || 1500);
 
+  //fetch expenses
   const fetchExpenses = useCallback(async () => {
-    if (!user?.uid) {
-      console.log('[fetchExpenses] no uid');
-      return;
-    }
-    console.log('[fetchExpenses] fetching for uid:', user.uid);
+    if (!user?.id) return;
     setLoading(true);
-    const res = await request(`/expense/user/${user.uid}`, user?.idToken);
-    console.log('[fetchExpenses] res.data:', res?.data);
+    const res = await api.get(user.id);
     setExpenses(res?.data || []);
     setLoading(false);
-  }, [user]);
+  }, [user?.id]);
 
+  //add expense
   const addExpense = useCallback(async (data) => {
-    if (!user?.uid) {
+    if (!user?.id) {
       Alert.alert('Error', 'Not authenticated');
       return false;
     }
     setLoading(true);
-    const payload = {
-      title: data.title,
-      description: data.description || data.title,
-      amount: data.amount
-    };
-    console.log('[addExpense] sending:', payload);
-    const res = await request(`/expense/user/${user.uid}`, user?.idToken, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
+    const res = await api.add(user.id, data);
     if (res?.success) {
-      console.log('[addExpense] success, fetching expenses...');
       await fetchExpenses();
       Alert.alert('Success', 'Expense added');
       return true;
@@ -65,11 +63,12 @@ export const ExpensesProvider = ({ children }) => {
       Alert.alert('Error', res?.message || 'Failed');
       return false;
     }
-  }, [user, fetchExpenses]);
+  }, [user?.id, fetchExpenses]);
 
+  //delete expense
   const deleteExpense = useCallback(async (id) => {
     setLoading(true);
-    const res = await request(`/expense/${id}`, user?.idToken, { method: 'DELETE' });
+    const res = await api.del(id);
     if (res?.success) {
       await fetchExpenses();
       Alert.alert('Success', 'Deleted');
@@ -78,54 +77,40 @@ export const ExpensesProvider = ({ children }) => {
       Alert.alert('Error', res?.message || 'Failed');
       return false;
     }
-  }, [user, fetchExpenses]);
+  }, [fetchExpenses]);
 
-  const updateBudget = useCallback(async (newBudget) => {
-    if (!user?.uid) {
-      Alert.alert('Error', 'Not authenticated');
-      return false;
-    }
-    setLoading(true);
-    const res = await request(`/user/${user.uid}`, user?.idToken, {
-      method: 'PUT',
-      body: JSON.stringify({ monthlyBudget: newBudget })
-    });
-    if (res?.success) {
-      setBudget(newBudget);
-      Alert.alert('Success', 'Budget updated');
-      return true;
-    } else {
-      Alert.alert('Error', res?.message || 'Failed to update budget');
-      return false;
-    }
-  }, [user]);
-
+  //on user change
   useEffect(() => {
-    if (user?.uid) fetchExpenses();
-  }, [user?.uid, fetchExpenses]);
+    if (user?.id) fetchExpenses();
+  }, [user?.id, fetchExpenses]);
 
+  //sync budget
   useEffect(() => {
-    if (user?.monthlyBudget !== undefined) setBudget(user.monthlyBudget);
+    if (user?.monthlyBudget) setBudget(user.monthlyBudget);
   }, [user?.monthlyBudget]);
 
+  //computed values
   const total = expenses.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
   const remaining = budget - total;
   const percent = budget > 0 ? Math.min((total / budget) * 100, 100) : 0;
+  //bar color
   const color = percent > 80 ? '#EF4444' : percent > 50 ? '#F59E0B' : '#10B981';
 
+  //provide
   return (
     <ExpensesContext.Provider value={{
       expenses,
       loading,
       monthlyBudget: budget,
-      setMonthlyBudget: updateBudget,
+      setMonthlyBudget: setBudget,
       totalExpenses: total,
       remaining,
       budgetPercent: percent,
       barColor: color,
       fetchExpenses,
       addExpense,
-      deleteExpense
+      deleteExpense,
+      api
     }}>
       {children}
     </ExpensesContext.Provider>

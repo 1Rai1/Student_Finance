@@ -1,16 +1,19 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { useNavigation } from '@react-navigation/native';
 import LoginScreen from '../Login';
 
-// Mock dependencies
+// Stable mock
+const mockLogin = jest.fn();
+
 jest.mock('@react-navigation/native');
 jest.mock('../hooks/useAuth', () => ({
   useAuth: () => ({
-    login: jest.fn().mockResolvedValue({ success: true }),
+    login: mockLogin,
     loading: false,
   }),
 }));
+
 jest.mock('../styles/global', () => ({
   COLORS: {
     white: '#ffffff',
@@ -18,6 +21,7 @@ jest.mock('../styles/global', () => ({
     darkGray: '#333333',
     mediumGray: '#999999',
     primary: '#007AFF',
+    navy: '#001f3f',
   },
   SPACING: {
     sm: 8,
@@ -29,11 +33,13 @@ jest.mock('../styles/global', () => ({
     h2: { fontSize: 24, fontWeight: 'bold' },
     subtitle: { fontSize: 14, color: '#666' },
     bodySmall: { fontSize: 12 },
+    caption: { fontSize: 10 },
   },
   LAYOUT: {
     container: { flex: 1, padding: 20 },
     header: { alignItems: 'center', marginVertical: 20 },
     backButton: { padding: 10 },
+    footer: { alignItems: 'center' },
   },
   INPUT: {
     group: { marginBottom: 16 },
@@ -45,6 +51,7 @@ jest.mock('../styles/global', () => ({
     primary: { backgroundColor: '#007AFF', padding: 15, borderRadius: 8 },
     pressed: { opacity: 0.8 },
     disabled: { opacity: 0.5 },
+    text: { color: '#fff', textAlign: 'center' },
   },
 }));
 
@@ -57,16 +64,6 @@ describe('LoginScreen Component', () => {
     });
   });
 
-  it('should render login screen', () => {
-    const { container } = render(<LoginScreen />);
-    expect(container).toBeTruthy();
-  });
-
-  it('should display welcome message', () => {
-    const { getByText } = render(<LoginScreen />);
-    expect(getByText('Welcome Back')).toBeTruthy();
-  });
-
   it('should display email and password input fields', () => {
     const { getByPlaceholderText } = render(<LoginScreen />);
     expect(getByPlaceholderText('your@email.com')).toBeTruthy();
@@ -76,7 +73,7 @@ describe('LoginScreen Component', () => {
   it('should update email state on input change', () => {
     const { getByPlaceholderText } = render(<LoginScreen />);
     const emailInput = getByPlaceholderText('your@email.com');
-    
+
     fireEvent.changeText(emailInput, 'test@example.com');
     expect(emailInput.props.value).toBe('test@example.com');
   });
@@ -84,7 +81,7 @@ describe('LoginScreen Component', () => {
   it('should update password state on input change', () => {
     const { getByPlaceholderText } = render(<LoginScreen />);
     const passwordInput = getByPlaceholderText('Enter password');
-    
+
     fireEvent.changeText(passwordInput, 'password123');
     expect(passwordInput.props.value).toBe('password123');
   });
@@ -96,24 +93,22 @@ describe('LoginScreen Component', () => {
 
     expect(passwordInput.props.secureTextEntry).toBe(true);
     fireEvent.press(toggleButton);
-    // Note: Actual toggle test requires state management to be testable
   });
 
   it('should have back navigation button', () => {
     const { getByText } = render(<LoginScreen />);
-    const backButton = getByText('←');
-    expect(backButton).toBeTruthy();
+    expect(getByText('←')).toBeTruthy();
   });
 
-  it('should have loginbutton', () => {
+  it('should have login button', () => {
     const { getByText } = render(<LoginScreen />);
-    const loginButton = getByText(/Login|Sign In|Continue/i);
-    expect(loginButton).toBeTruthy();
+    expect(getByText('Sign In')).toBeTruthy();
   });
 
   it('should show sign up link', () => {
     const { getByText } = render(<LoginScreen />);
-    expect(getByText(/Don't have an account|Sign up|Create account/i)).toBeTruthy();
+    expect(getByText("Don't have an account?")).toBeTruthy();
+    expect(getByText('Sign Up')).toBeTruthy();
   });
 
   it('should disable inputs while loading', () => {

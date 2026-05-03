@@ -1,130 +1,122 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import API_BASE, { FIREBASE_CONFIG } from '../config';
+import API_BASE from '../config';
 
+//context
 const AuthContext = createContext({});
 export const useAuth = () => useContext(AuthContext);
 
-const exchangeCustomToken = async (customToken) => {
-  const { apiKey } = FIREBASE_CONFIG;
-  const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: customToken, returnSecureToken: true })
-  });
-  const data = await res.json();
-  if (!data.idToken) throw new Error(data.error?.message || 'Exchange failed');
-  return { idToken: data.idToken, refreshToken: data.refreshToken };
-};
+//API proxy
+const api = new Proxy({}, {
+  get: (_, method) => async (id, data) => {
+    //endpoints
+    const endpoints = {
+      getUsers: ['/user', {}],
+      getUser: [`/user/${id}`, {}],
+      createUser: ['/user/create', { method: 'POST', body: JSON.stringify(data) }],
+      updateUser: [`/user/${id}`, { method: 'PUT', body: JSON.stringify(data) }],
+      deleteUser: [`/user/${id}`, { method: 'DELETE' }],
+      searchUsers: [`/user/query?${new URLSearchParams(id)}`, {}]
+    };
+    const [url, options] = endpoints[method] || [];
+    //invalid method
+    if (!url) return;
+
+    try {
+      //fetch
+      const res = await fetch(`${API_BASE}${url}`, { headers: { 'Content-Type': 'application/json' }, ...options });
+      return await res.json();
+    } catch (error) {
+      console.error(`API Error:`, error);
+    }
+  }
+});
 
 export const AuthProvider = ({ children }) => {
+  //state
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
 
-  useEffect(() => {
-    const restore = async () => {
-      try {
-        const idToken = await AsyncStorage.getItem('idToken');
-        const storedUser = await AsyncStorage.getItem('user');
-        if (idToken && storedUser) {
-          const userInfo = JSON.parse(storedUser);
-          userInfo.idToken = idToken;
-          setUser(userInfo);
-        }
-      } catch (e) {}
-      setInitializing(false);
-    };
-    restore();
-  }, []);
+  //restore session
+useEffect(() => {
+  let isMounted = true;
 
-  const register = async (userData) => {
-    setLoading(true);
+  const loadUser = async () => {
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userData.email,
-          password: userData.password,
-          name: userData.username
-        })
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
+      const data = await AsyncStorage.getItem('user');
 
-      const { idToken } = await exchangeCustomToken(data.data.customToken);
+      if (!isMounted) return;
 
-      const meRes = await fetch(`${API_BASE}/auth/me`, {
-        headers: { 'Authorization': `Bearer ${idToken}` }
-      });
-      const meData = await meRes.json();
-      if (!meData.success) throw new Error('Failed to fetch user');
-
-      const userInfo = {
-        uid: meData.data.uid,
-        email: userData.email,
-        name: meData.data.name,
-        role: meData.data.role,
-        monthlyBudget: meData.data.monthlyBudget || 1500,
-        idToken
-      };
-      await AsyncStorage.setItem('user', JSON.stringify(userInfo));
-      await AsyncStorage.setItem('idToken', idToken);
-      setUser(userInfo);
-      return { success: true };
-    } catch (err) {
-      return { success: false, message: err.message };
+      if (data) {
+        setUser(JSON.parse(data));
+      }
+    } catch (error) {
+      console.error(error);
     } finally {
-      setLoading(false);
+      if (isMounted) {
+        setInitializing(false);
+      }
     }
   };
 
+  loadUser();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
+
+  //login
   const login = async (email, password) => {
     setLoading(true);
     try {
-      const tokenRes = await fetch(`${API_BASE}/auth/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const tokenData = await tokenRes.json();
-      if (!tokenData.success) throw new Error(tokenData.message);
+      const { data } = (await api.getUsers()) || {};
+      const foundUser = data?.find(u => u.email === email);
 
-      const { idToken } = await exchangeCustomToken(tokenData.data.customToken);
+      //not found
+      if (!foundUser) return { success: false, message: 'User not found' };
+      //wrong password
+      if (foundUser.password !== password) return { success: false, message: 'Invalid password' };
 
-      const meRes = await fetch(`${API_BASE}/auth/me`, {
-        headers: { 'Authorization': `Bearer ${idToken}` }
-      });
-      const meData = await meRes.json();
-      if (!meData.success) throw new Error('Failed to fetch user');
-
-      const userInfo = {
-        uid: meData.data.uid,
-        email: meData.data.email,
-        name: meData.data.name,
-        role: meData.data.role,
-        monthlyBudget: meData.data.monthlyBudget || 1500,
-        idToken
-      };
-      await AsyncStorage.setItem('user', JSON.stringify(userInfo));
-      await AsyncStorage.setItem('idToken', idToken);
-      setUser(userInfo);
+      //persist
+      const userData = { id: foundUser.id, name: foundUser.name, email: foundUser.email, monthlyBudget: foundUser.monthlyBudget || 1500, role: foundUser.role || 'user' };
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
       return { success: true };
-    } catch (err) {
-      return { success: false, message: err.message || 'Login failed' };
+    } catch {
+      return { success: false, message: 'Network error' };
     } finally {
       setLoading(false);
     }
   };
 
+  //register
+  const register = async (userData) => {
+    setLoading(true);
+    try {
+      const { data } = (await api.getUsers()) || {};
+      //duplicate email
+      if (data?.some(u => u.email === userData.email)) return { success: false, message: 'Email exists' };
+
+      const result = await api.createUser({ name: userData.username, email: userData.email, password: userData.password, role: 'user', monthlyBudget: 1500 });
+      return { success: result?.success, message: result?.success ? 'Account created' : 'Registration failed' };
+    } catch {
+      return { success: false, message: 'Network error' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  //logout
   const logout = async () => {
-    await AsyncStorage.multiRemove(['user', 'idToken']);
+    await AsyncStorage.removeItem('user');
     setUser(null);
   };
 
+  //provide
   return (
-    <AuthContext.Provider value={{ user, loading, initializing, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, initializing, login, register, logout, api }}>
       {children}
     </AuthContext.Provider>
   );
