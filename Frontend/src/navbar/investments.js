@@ -1,13 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet, Text, View, Pressable, FlatList,
-  Linking, Modal, ActivityIndicator, Animated, Dimensions,
+  Linking, Modal, ActivityIndicator,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useAdmin } from '../hooks/useAdmin';
-import { Confetti, showConfetti } from '../styles/global';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 //category colors
 const CATEGORY_COLORS = {
@@ -15,39 +11,34 @@ const CATEGORY_COLORS = {
   Crypto: '#F59E0B', Savings: '#EC4899', 'Real Estate': '#EF4444', Budgeting: '#06B6D4',
 };
 
-//quiz modal (slide-up animation + confetti on completion)
+//quiz modal for users
 function QuizModal({ lesson, quizzes, visible, onClose }) {
+  //state
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-  const confettiRef = useRef(null);
 
+  //reset on open
   useEffect(() => {
-    if (visible) {
-      setCurrent(0); setSelected(null); setScore(0); setDone(false);
-      Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
-    } else {
-      Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 300, useNativeDriver: true }).start();
-    }
+    if (visible) { setCurrent(0); setSelected(null); setScore(0); setDone(false); }
   }, [visible]);
 
   if (!quizzes.length) return (
-    <Modal visible={visible} transparent onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.quizOverlay}>
-        <Animated.View style={[styles.quizBox, { transform: [{ translateY: slideAnim }] }]}>
+        <View style={styles.quizBox}>
           <Text style={styles.quizTitle}>No questions yet.</Text>
           <Pressable style={styles.quizBtn} onPress={onClose}><Text style={styles.quizBtnText}>Close</Text></Pressable>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
 
   const q = quizzes[current];
 
+  //submit answer
   const submit = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const correct = selected === q.correctIndex;
     const newScore = correct ? score + 1 : score;
     if (current + 1 < quizzes.length) {
@@ -57,39 +48,30 @@ function QuizModal({ lesson, quizzes, visible, onClose }) {
     } else {
       setScore(newScore);
       setDone(true);
-      if (newScore === quizzes.length) {
-        showConfetti(confettiRef);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else if (newScore >= quizzes.length / 2) {
-        showConfetti(confettiRef);
-      }
     }
   };
 
   return (
-    <Modal visible={visible} transparent onRequestClose={onClose}>
-      <Confetti ref={confettiRef} />
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.quizOverlay}>
-        <Animated.View style={[styles.quizBox, { transform: [{ translateY: slideAnim }] }]}>
+        <View style={styles.quizBox}>
           {done ? (
+            //results
             <>
               <Text style={styles.quizTitle}>Quiz Complete</Text>
               <Text style={styles.quizScore}>{score} / {quizzes.length}</Text>
               <Text style={styles.quizSub}>
-                {score === quizzes.length ? 'Perfect score! 🎉' : score >= quizzes.length / 2 ? 'Good job! 🌟' : 'Keep studying! 📚'}
+                {score === quizzes.length ? 'Perfect score!' : score >= quizzes.length / 2 ? 'Good job!' : 'Keep studying!'}
               </Text>
               <Pressable style={styles.quizBtn} onPress={onClose}><Text style={styles.quizBtnText}>Done</Text></Pressable>
             </>
           ) : (
+            //question
             <>
               <Text style={styles.quizProgress}>Question {current + 1} of {quizzes.length}</Text>
               <Text style={styles.quizTitle}>{q.question}</Text>
               {q.options?.map((opt, i) => (
-                <Pressable
-                  key={i}
-                  style={[styles.quizOption, selected === i && styles.quizOptionSelected]}
-                  onPress={() => { setSelected(i); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                >
+                <Pressable key={i} style={[styles.quizOption, selected === i && styles.quizOptionSelected]} onPress={() => setSelected(i)}>
                   <Text style={[styles.quizOptionText, selected === i && { color: '#FFFFFF' }]}>{opt}</Text>
                 </Pressable>
               ))}
@@ -98,7 +80,7 @@ function QuizModal({ lesson, quizzes, visible, onClose }) {
               </Pressable>
             </>
           )}
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -106,28 +88,33 @@ function QuizModal({ lesson, quizzes, visible, onClose }) {
 
 export default function InvestmentsScreen() {
   const { lessons, quizzes, loading, fetchLessons, fetchQuizzes } = useAdmin();
+  //state
   const [quizLesson, setQuizLesson] = useState(null);
   const [quizVisible, setQuizVisible] = useState(false);
 
+  //load lessons on mount
   useEffect(() => { fetchLessons(); }, []);
 
+  //open video
   const openVideo = (url) => { Linking.openURL(url); };
 
+  //open quiz
   const openQuiz = async (lesson) => {
     await fetchQuizzes(lesson.id);
     setQuizLesson(lesson);
     setQuizVisible(true);
   };
 
+  //render lesson card
   const renderLesson = ({ item }) => (
-    <Pressable
-      style={({ pressed }) => [styles.videoCard, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
-      onPress={() => openVideo(item.url)}
-    >
-      <View style={[styles.thumbnail, { backgroundColor: CATEGORY_COLORS[item.category] || '#0A2463' }]}>
-        <Text style={styles.playIcon}>▶ Play</Text>
+    <View style={styles.videoCard}>
+      <Pressable
+        style={({ pressed }) => [styles.thumbnail, { backgroundColor: CATEGORY_COLORS[item.category] || '#0A2463', opacity: pressed ? 0.9 : 1 }]}
+        onPress={() => openVideo(item.url)}
+      >
+        <Text style={styles.playIcon}>Play</Text>
         <Text style={styles.duration}>{item.duration}</Text>
-      </View>
+      </Pressable>
       <View style={styles.videoInfo}>
         <Text style={styles.videoTitle} numberOfLines={2}>{item.title}</Text>
         {!!item.description && <Text style={styles.videoDesc} numberOfLines={2}>{item.description}</Text>}
@@ -140,7 +127,7 @@ export default function InvestmentsScreen() {
           </Pressable>
         </View>
       </View>
-    </Pressable>
+    </View>
   );
 
   return (
